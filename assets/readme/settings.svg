@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">模型哨兵设置界面</title>
+  <desc id="desc">展示全局默认与当前任务配置，包括自动启用、提醒时机、模型选择和首次启用处理。</desc>
+
+  <rect width="1200" height="700" rx="26" fill="#F1F5F9"/>
+  <rect x="1" y="1" width="1198" height="698" rx="25" fill="none" stroke="#CBD5E1"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <g transform="translate(42 34)">
+      <rect width="1116" height="632" rx="22" fill="#FFFFFF" stroke="#CBD5E1"/>
+
+      <text x="32" y="48" font-size="26" font-weight="760" fill="#0F172A">模型哨兵设置</text>
+      <text x="32" y="76" font-size="15" fill="#64748B">先设全局默认，再按需覆盖当前任务。</text>
+      <rect x="934" y="28" width="150" height="40" rx="12" fill="#F1F5F9"/>
+      <text x="1009" y="54" text-anchor="middle" font-size="14" font-weight="700" fill="#475569">查看命令速查</text>
+
+      <g transform="translate(32 100)">
+        <rect width="146" height="40" rx="12" fill="#0F172A"/>
+        <text x="73" y="26" text-anchor="middle" font-size="15" font-weight="700" fill="#F8FAFC">全局默认</text>
+        <rect x="158" width="146" height="40" rx="12" fill="#F1F5F9"/>
+        <text x="231" y="26" text-anchor="middle" font-size="15" font-weight="700" fill="#64748B">当前任务</text>
+      </g>
+
+      <line x1="32" y1="160" x2="1084" y2="160" stroke="#E2E8F0"/>
+
+      <g transform="translate(32 184)">
+        <text x="0" y="20" font-size="17" font-weight="700" fill="#0F172A">新任务自动启用</text>
+        <text x="0" y="46" font-size="14" fill="#64748B">关闭后，新任务需要通过命令主动启用。</text>
+        <rect x="440" y="4" width="64" height="32" rx="16" fill="#CBD5E1"/>
+        <circle cx="456" cy="20" r="12" fill="#FFFFFF"/>
+        <text x="520" y="26" font-size="14" font-weight="700" fill="#64748B">关闭 · 默认</text>
+      </g>
+
+      <line x1="32" y1="252" x2="1084" y2="252" stroke="#E2E8F0"/>
+
+      <g transform="translate(32 276)">
+        <text x="0" y="20" font-size="17" font-weight="700" fill="#0F172A">提醒时机</text>
+        <text x="0" y="46" font-size="14" fill="#64748B">控制何时显示建议；自动模式仍会在后台完成判断。</text>
+        <g transform="translate(440 0)">
+          <circle cx="12" cy="17" r="10" fill="#0F766E"/>
+          <circle cx="12" cy="17" r="4" fill="#FFFFFF"/>
+          <text x="32" y="23" font-size="15" font-weight="700" fill="#0F172A">仅需要切换时提醒 · 默认</text>
+          <circle cx="12" cy="53" r="10" fill="#FFFFFF" stroke="#94A3B8"/>
+          <text x="32" y="59" font-size="15" fill="#475569">每轮显示判断结果</text>
+          <circle cx="276" cy="53" r="10" fill="#FFFFFF" stroke="#94A3B8"/>
+          <text x="296" y="59" font-size="15" fill="#475569">手动检查</text>
+        </g>
+      </g>
+
+      <line x1="32" y1="366" x2="1084" y2="366" stroke="#E2E8F0"/>
+
+      <g transform="translate(32 390)">
+        <text x="0" y="20" font-size="17" font-weight="700" fill="#0F172A">模型选择</text>
+        <text x="0" y="46" font-size="14" fill="#64748B">选择由哪个 Codex 模型执行判断。</text>
+        <g transform="translate(440 0)">
+          <rect width="164" height="62" rx="14" fill="#ECFDF5" stroke="#14B8A6"/>
+          <text x="16" y="27" font-size="15" font-weight="700" fill="#0F766E">跟随主模型</text>
+          <text x="16" y="48" font-size="13" fill="#0F766E">默认 · 最低开销</text>
+          <rect x="176" width="164" height="62" rx="14" fill="#F8FAFC" stroke="#CBD5E1"/>
+          <text x="192" y="27" font-size="15" font-weight="700" fill="#334155">独立评估</text>
+          <text x="192" y="48" font-size="13" fill="#64748B">指定子 Agent</text>
+          <rect x="352" width="164" height="62" rx="14" fill="#F8FAFC" stroke="#CBD5E1"/>
+          <text x="368" y="27" font-size="15" font-weight="700" fill="#334155">智能复核</text>
+          <text x="368" y="48" font-size="13" fill="#64748B">必要时调用子 Agent</text>
+        </g>
+        <text x="440" y="80" font-size="13" fill="#64748B">选择独立评估或智能复核后，再指定子 Agent 的模型与推理深度。</text>
+      </g>
+
+      <line x1="32" y1="482" x2="1084" y2="482" stroke="#E2E8F0"/>
+
+      <g transform="translate(32 506)">
+        <text x="0" y="20" font-size="17" font-weight="700" fill="#0F172A">首次启用检查</text>
+        <text x="0" y="46" font-size="14" fill="#64748B">这是运行逻辑，不需要提前配置。</text>
+        <rect x="440" y="0" width="500" height="42" rx="12" fill="#FFFBEB" stroke="#FCD34D"/>
+        <text x="456" y="27" font-size="14" font-weight="700" fill="#92400E">推理深度缺失 → 提示一次 → 跳过后按 medium（中度）估算</text>
+      </g>
+
+      <line x1="32" y1="574" x2="1084" y2="574" stroke="#E2E8F0"/>
+
+      <g transform="translate(32 592)">
+        <text x="0" y="20" font-size="14" fill="#64748B">配置保存在本地</text>
+        <rect x="818" y="-6" width="112" height="38" rx="12" fill="#F1F5F9"/>
+        <text x="874" y="19" text-anchor="middle" font-size="14" font-weight="700" fill="#475569">恢复默认</text>
+        <rect x="942" y="-6" width="110" height="38" rx="12" fill="#0F766E"/>
+        <text x="997" y="19" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">保存设置</text>
+      </g>
+    </g>
+  </g>
+</svg>

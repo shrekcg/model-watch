@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">模型哨兵自动提醒工作流</title>
+  <desc id="desc">用户发送任务后，Hook 注入精简状态，模型在完成主任务的同一轮评估下一轮档位，主回答始终优先输出，只有值得切换时才追加下一轮建议。</desc>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#64748B"/>
+    </marker>
+    <marker id="arrow-teal" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#0F766E"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="650" rx="26" fill="#F8FAFC"/>
+  <rect x="1" y="1" width="1198" height="648" rx="25" fill="none" stroke="#CBD5E1"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <text x="58" y="58" font-size="34" font-weight="760" fill="#0F172A">自动提醒如何运行</text>
+    <text x="58" y="88" font-size="17" fill="#64748B">同一轮先完成主任务，再决定是否在回答末尾追加下一轮建议。</text>
+
+    <g transform="translate(58 128)">
+      <g>
+        <rect width="180" height="118" rx="18" fill="#FFFFFF" stroke="#CBD5E1"/>
+        <circle cx="28" cy="28" r="13" fill="#E2E8F0"/>
+        <text x="28" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">1</text>
+        <text x="22" y="68" font-size="18" font-weight="700" fill="#0F172A">用户发送任务</text>
+        <text x="22" y="94" font-size="14" fill="#64748B">本轮正常对话输入</text>
+      </g>
+
+      <path d="M192 59 H228" stroke="#64748B" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+      <g transform="translate(240)">
+        <rect width="234" height="118" rx="18" fill="#FFFFFF" stroke="#CBD5E1"/>
+        <circle cx="28" cy="28" r="13" fill="#E2E8F0"/>
+        <text x="28" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">2</text>
+        <text x="22" y="68" font-size="18" font-weight="700" fill="#0F172A">Hook 注入精简状态</text>
+        <text x="22" y="94" font-size="14" fill="#64748B">当前模型 · 配置 · 上轮阶段</text>
+      </g>
+
+      <path d="M486 59 H522" stroke="#64748B" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+      <g transform="translate(534)">
+        <rect width="344" height="118" rx="18" fill="#ECFDF5" stroke="#14B8A6"/>
+        <circle cx="28" cy="28" r="13" fill="#99F6E4"/>
+        <text x="28" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="#115E59">3</text>
+        <text x="22" y="66" font-size="18" font-weight="700" fill="#115E59">同一轮完成两件事</text>
+        <text x="22" y="92" font-size="15" font-weight="700" fill="#0F766E">主任务回答</text>
+        <text x="124" y="92" font-size="15" fill="#0F766E">＋ 评估下一轮模型与推理深度</text>
+      </g>
+
+      <path d="M890 59 H926" stroke="#0F766E" stroke-width="2.5" marker-end="url(#arrow-teal)"/>
+
+      <g transform="translate(938)">
+        <rect width="204" height="118" rx="18" fill="#0F172A"/>
+        <circle cx="28" cy="28" r="13" fill="#134E4A"/>
+        <text x="28" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="#99F6E4">4</text>
+        <text x="22" y="68" font-size="18" font-weight="700" fill="#F8FAFC">组织本轮输出</text>
+        <text x="22" y="94" font-size="14" fill="#94A3B8">主回答始终优先</text>
+      </g>
+    </g>
+
+    <g transform="translate(58 282)">
+      <rect width="1084" height="214" rx="20" fill="#FFFFFF" stroke="#CBD5E1"/>
+      <text x="26" y="36" font-size="15" font-weight="700" fill="#64748B">用户看到的最终回答</text>
+
+      <g transform="translate(26 58)">
+        <rect width="1032" height="54" rx="14" fill="#F1F5F9"/>
+        <rect width="9" height="54" rx="4.5" fill="#0F172A"/>
+        <text x="28" y="34" font-size="17" font-weight="700" fill="#0F172A">① 主任务回答</text>
+        <text x="178" y="34" font-size="15" fill="#64748B">无论推荐是否变化，本轮任务都正常完成</text>
+      </g>
+
+      <g transform="translate(26 132)">
+        <rect width="480" height="56" rx="14" fill="#F8FAFC" stroke="#E2E8F0"/>
+        <text x="20" y="24" font-size="15" font-weight="700" fill="#334155">当前档位仍然合适</text>
+        <text x="20" y="46" font-size="14" fill="#64748B">回答结束，不增加模型哨兵文案</text>
+
+        <text x="516" y="34" font-size="15" font-weight="700" fill="#94A3B8">或</text>
+
+        <rect x="552" width="480" height="56" rx="14" fill="#ECFDF5" stroke="#14B8A6"/>
+        <text x="572" y="24" font-size="15" font-weight="700" fill="#0F766E">下一轮值得切换</text>
+        <text x="572" y="46" font-size="14" fill="#0F766E">末尾追加：模型建议＋目标模型＋推理深度＋原因</text>
+      </g>
+    </g>
+
+    <g transform="translate(58 522)">
+      <rect width="1084" height="88" rx="18" fill="#0F172A"/>
+      <text x="24" y="31" font-size="15" font-weight="700" fill="#5EEAD4">响应结束后</text>
+      <text x="132" y="31" font-size="15" fill="#E2E8F0">保存任务阶段、判断结果和当前配置，供下一轮读取，并在长对话压缩后恢复</text>
+      <text x="24" y="61" font-size="14" fill="#94A3B8">建议只作用于下一轮；用户是否切换由用户决定</text>
+      <text x="848" y="61" font-size="14" fill="#94A3B8">本地状态 · 失败时继续主任务</text>
+    </g>
+
+    <text x="58" y="635" font-size="13" fill="#64748B">判断执行者由“模型选择”配置决定；默认跟随主模型，不增加独立模型请求。</text>
+  </g>
+</svg>

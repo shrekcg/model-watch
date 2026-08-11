@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="690" viewBox="0 0 1200 690" role="img" aria-labelledby="title desc">
+  <title id="title">模型哨兵实践示例</title>
+  <desc id="desc">展示保持静默、只调整推理深度、降低模型档位和提高模型档位四种典型输出。</desc>
+
+  <rect width="1200" height="690" rx="26" fill="#F8FAFC"/>
+  <rect x="1" y="1" width="1198" height="688" rx="25" fill="none" stroke="#CBD5E1"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <text x="58" y="58" font-size="34" font-weight="760" fill="#0F172A">它会在什么时候说什么</text>
+    <text x="58" y="88" font-size="17" fill="#64748B">下面是完整输出示意。具体推荐由模型结合当时上下文判断，不是固定映射。</text>
+
+    <g transform="translate(58 126)">
+      <rect width="526" height="232" rx="20" fill="#FFFFFF" stroke="#CBD5E1"/>
+      <rect x="20" y="20" width="96" height="28" rx="14" fill="#E2E8F0"/>
+      <text x="68" y="39" text-anchor="middle" font-size="14" font-weight="700" fill="#334155">保持静默</text>
+      <text x="20" y="78" font-size="16" font-weight="700" fill="#0F172A">当前：Sol / high（高）</text>
+      <text x="20" y="108" font-size="16" fill="#475569">本轮：把这三个标题统一格式，改完就结束。</text>
+      <line x1="20" y1="132" x2="506" y2="132" stroke="#E2E8F0"/>
+      <text x="20" y="163" font-size="14" font-weight="700" fill="#64748B">主任务正常回答</text>
+      <text x="20" y="193" font-size="17" font-weight="700" fill="#0F766E">末尾不显示模型建议</text>
+      <text x="20" y="217" font-size="14" fill="#64748B">一次性轻量操作，切换成本高于可能节省。</text>
+    </g>
+
+    <g transform="translate(616 126)">
+      <rect width="526" height="232" rx="20" fill="#FFFFFF" stroke="#CBD5E1"/>
+      <rect x="20" y="20" width="128" height="28" rx="14" fill="#ECFDF5"/>
+      <text x="84" y="39" text-anchor="middle" font-size="14" font-weight="700" fill="#0F766E">只调整推理深度</text>
+      <text x="20" y="78" font-size="16" font-weight="700" fill="#0F172A">当前：Sol / high（高）</text>
+      <text x="20" y="108" font-size="16" fill="#475569">变化：后续只需整理表格和统一格式。</text>
+      <line x1="20" y1="132" x2="506" y2="132" stroke="#E2E8F0"/>
+      <text x="20" y="162" font-size="14" font-weight="700" fill="#0F766E">模型建议</text>
+      <text x="20" y="190" font-size="16" font-weight="700" fill="#0F172A">下一轮保持 Sol，降至 low（轻度）</text>
+      <text x="20" y="216" font-size="14" fill="#64748B">后续工作明确，暂不需要高强度推理。</text>
+    </g>
+
+    <g transform="translate(58 386)">
+      <rect width="526" height="246" rx="20" fill="#FFFFFF" stroke="#CBD5E1"/>
+      <rect x="20" y="20" width="128" height="28" rx="14" fill="#ECFDF5"/>
+      <text x="84" y="39" text-anchor="middle" font-size="14" font-weight="700" fill="#0F766E">模型与深度降档</text>
+      <text x="20" y="78" font-size="16" font-weight="700" fill="#0F172A">当前：Sol / high（高）</text>
+      <text x="20" y="108" font-size="16" fill="#475569">变化：接下来连续处理 30 条同类文案。</text>
+      <line x1="20" y1="132" x2="506" y2="132" stroke="#E2E8F0"/>
+      <text x="20" y="162" font-size="14" font-weight="700" fill="#0F766E">模型建议</text>
+      <text x="20" y="190" font-size="16" font-weight="700" fill="#0F172A">下一轮切换至 Luna / low（轻度）</text>
+      <text x="20" y="216" font-size="14" fill="#64748B">后续为持续、多轮、重复且边界明确的任务。</text>
+    </g>
+
+    <g transform="translate(616 386)">
+      <rect width="526" height="246" rx="20" fill="#0F172A"/>
+      <rect x="20" y="20" width="128" height="28" rx="14" fill="#134E4A"/>
+      <text x="84" y="39" text-anchor="middle" font-size="14" font-weight="700" fill="#99F6E4">模型与深度升档</text>
+      <text x="20" y="78" font-size="16" font-weight="700" fill="#F8FAFC">当前：Terra / medium（中度）</text>
+      <text x="20" y="108" font-size="16" fill="#CBD5E1">变化：进入登录、支付、退款与数据设计。</text>
+      <line x1="20" y1="132" x2="506" y2="132" stroke="#334155"/>
+      <text x="20" y="162" font-size="14" font-weight="700" fill="#5EEAD4">模型建议</text>
+      <text x="20" y="190" font-size="16" font-weight="700" fill="#F8FAFC">下一轮切换至 Sol / high（高）</text>
+      <text x="20" y="216" font-size="14" fill="#94A3B8">任务已进入跨系统、高影响的设计阶段。</text>
+    </g>
+  </g>
+</svg>

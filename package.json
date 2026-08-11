@@ -1,0 +1,14 @@
+{
+  "name": "model-watch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Codex model and reasoning-effort recommendation assistant for long-running tasks.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

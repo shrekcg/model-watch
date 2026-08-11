@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">模型哨兵</title>
+  <desc id="desc">在合适时机提示用户切换 Codex 模型与推理深度，并展示从当前档位到推荐档位的判断路径。</desc>
+
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111A31"/>
+      <stop offset="1" stop-color="#0B1020"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#5EEAD4"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="380" rx="28" fill="#0B1020"/>
+  <rect x="24" y="24" width="1152" height="332" rx="22" fill="url(#panel)" stroke="#24304A"/>
+
+  <g transform="translate(70 62)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <text x="0" y="18" font-size="16" font-weight="700" letter-spacing="2" fill="#5EEAD4">CODEX 模型选择辅助插件</text>
+    <text x="0" y="100" font-size="66" font-weight="760" fill="#F8FAFC">模型哨兵</text>
+    <text x="0" y="148" font-size="25" font-weight="500" fill="#CBD5E1">在合适时机，提示你切换模型与推理深度</text>
+    <text x="0" y="192" font-size="19" fill="#94A3B8">控制额外判断成本 · 保持主任务连续 · 提高额度使用效率</text>
+
+    <g transform="translate(0 232)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+      <rect width="178" height="38" rx="19" fill="#17213A" stroke="#334155"/>
+      <text x="89" y="25" text-anchor="middle" font-size="15" fill="#E2E8F0">模型与深度一起建议</text>
+      <rect x="192" width="194" height="38" rx="19" fill="#17213A" stroke="#334155"/>
+      <text x="289" y="25" text-anchor="middle" font-size="15" fill="#E2E8F0">全局与当前任务配置</text>
+    </g>
+  </g>
+
+  <g transform="translate(720 58)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <text x="0" y="20" font-size="15" font-weight="700" letter-spacing="1.5" fill="#94A3B8">一次判断，只给一条建议</text>
+
+    <g transform="translate(0 50)">
+      <rect width="178" height="112" rx="18" fill="#121C33" stroke="#334155"/>
+      <text x="20" y="30" font-size="15" fill="#94A3B8">当前档位</text>
+      <text x="20" y="65" font-size="22" font-weight="700" fill="#F8FAFC">Terra</text>
+      <text x="20" y="91" font-size="16" fill="#CBD5E1">medium（中度）</text>
+    </g>
+
+    <path d="M190 106 C238 106, 238 106, 280 106" fill="none" stroke="#5EEAD4" stroke-width="3" marker-end="url(#arrow)"/>
+    <circle cx="234" cy="106" r="18" fill="#0B1020" stroke="#5EEAD4" stroke-width="2"/>
+    <path d="M226 106 L232 112 L243 99" fill="none" stroke="#5EEAD4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g transform="translate(292 50)">
+      <rect width="178" height="112" rx="18" fill="#10272A" stroke="#5EEAD4"/>
+      <text x="20" y="30" font-size="15" fill="#99F6E4">下一轮建议</text>
+      <text x="20" y="65" font-size="22" font-weight="700" fill="#F8FAFC">Sol</text>
+      <text x="20" y="91" font-size="16" fill="#CCFBF1">high（高）</text>
+    </g>
+
+    <g transform="translate(0 190)">
+      <rect width="470" height="82" rx="16" fill="#0E1629" stroke="#24304A"/>
+      <rect x="18" y="18" width="8" height="46" rx="4" fill="#FBBF24"/>
+      <text x="44" y="35" font-size="15" font-weight="700" fill="#FBBF24">模型建议</text>
+      <text x="44" y="59" font-size="16" fill="#E2E8F0">任务已进入跨系统、高影响的设计阶段</text>
+    </g>
+  </g>
+</svg>
