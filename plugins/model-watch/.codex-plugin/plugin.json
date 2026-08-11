@@ -1,0 +1,29 @@
+{
+  "name": "model-watch",
+  "version": "1.0.0",
+  "description": "在 Codex 长任务中按需建议下一轮模型与推理深度。",
+  "author": {
+    "name": "Shrek Wu",
+    "url": "https://github.com/shrekcg"
+  },
+  "homepage": "https://github.com/shrekcg/model-watch",
+  "repository": "https://github.com/shrekcg/model-watch",
+  "license": "MIT",
+  "keywords": ["codex", "model-routing", "reasoning-effort", "productivity"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "模型哨兵",
+    "shortDescription": "在合适时机建议下一轮模型与推理深度",
+    "longDescription": "在长对话和项目阶段变化时，用模型原生判断决定是否值得切换 Codex 模型或推理深度；当前配置合适时保持静默。",
+    "developerName": "Shrek Wu",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/shrekcg/model-watch",
+    "brandColor": "#5168FF",
+    "defaultPrompt": [
+      "使用模型哨兵监控当前任务，只在下一轮值得切换模型或推理深度时提醒我。",
+      "打开模型哨兵设置，并说明当前任务的生效配置。"
+    ]
+  }
+}

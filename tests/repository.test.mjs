@@ -13,12 +13,36 @@ test("required repository files exist", () => {
     "CONTRIBUTING.md",
     "LICENSE",
     "package.json",
-    ".github/workflows/validate.yml"
+    ".github/workflows/validate.yml",
+    ".agents/plugins/marketplace.json",
+    "plugins/model-watch/.codex-plugin/plugin.json",
+    "plugins/model-watch/.mcp.json",
+    "plugins/model-watch/hooks/hooks.json",
+    "plugins/model-watch/skills/model-watch/SKILL.md",
+    "plugins/model-watch/skills/model-watch/agents/openai.yaml",
+    "plugins/model-watch/scripts/model-watch-hook.mjs",
+    "plugins/model-watch/scripts/model-watch-mcp.mjs",
+    "plugins/model-watch/ui/settings.html"
   ];
 
   for (const file of requiredFiles) {
     assert.equal(existsSync(resolve(root, file)), true, `Missing ${file}`);
   }
+});
+
+test("plugin manifest points to real bundled capabilities", () => {
+  const manifest = JSON.parse(readFileSync(resolve(root, "plugins/model-watch/.codex-plugin/plugin.json"), "utf8"));
+  assert.equal(manifest.name, "model-watch");
+  assert.equal(manifest.skills, "./skills/");
+  assert.equal(manifest.mcpServers, "./.mcp.json");
+  assert.equal(existsSync(resolve(root, "plugins/model-watch/skills/model-watch/SKILL.md")), true);
+  assert.equal(existsSync(resolve(root, "plugins/model-watch/hooks/hooks.json")), true);
+});
+
+test("README documents existing-task recovery and fork fallback", () => {
+  assert.match(readme, /旧任务/);
+  assert.match(readme, /\$model-watch/);
+  assert.match(readme, /Fork/i);
 });
 
 test("README local image references resolve", () => {

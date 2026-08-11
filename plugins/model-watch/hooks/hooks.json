@@ -1,0 +1,31 @@
+{
+  "description": "Restore Model Watch state and inject compact per-turn evaluation context.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${PLUGIN_ROOT}/scripts/model-watch-hook.mjs",
+            "timeout": 5,
+            "additionalContextLimit": 900,
+            "statusMessage": "正在恢复模型哨兵"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${PLUGIN_ROOT}/scripts/model-watch-hook.mjs",
+            "timeout": 5,
+            "additionalContextLimit": 1200
+          }
+        ]
+      }
+    ]
+  }
+}

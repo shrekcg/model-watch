@@ -1,0 +1,20 @@
+{
+  "name": "model-watch",
+  "interface": {
+    "displayName": "模型哨兵"
+  },
+  "plugins": [
+    {
+      "name": "model-watch",
+      "source": {
+        "source": "local",
+        "path": "./plugins/model-watch"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

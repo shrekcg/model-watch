@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模型哨兵设置</title>
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, "PingFang SC", system-ui, sans-serif; }
+    body { margin: 0; background: transparent; color: CanvasText; }
+    .card { padding: 20px; border: 1px solid color-mix(in srgb, CanvasText 14%, transparent); border-radius: 18px; background: Canvas; }
+    h1 { margin: 0 0 4px; font-size: 21px; }
+    .subtitle { margin: 0 0 18px; opacity: .65; font-size: 13px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+    .tab { border: 0; border-radius: 9px; padding: 8px 12px; background: color-mix(in srgb, CanvasText 8%, transparent); color: inherit; cursor: pointer; }
+    .tab.active { background: #5168ff; color: white; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .row { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(180px, 1.2fr); gap: 12px; align-items: center; padding: 11px 0; border-bottom: 1px solid color-mix(in srgb, CanvasText 9%, transparent); }
+    label strong { display: block; font-size: 14px; }
+    label span { display: block; margin-top: 3px; opacity: .58; font-size: 12px; }
+    select, input[type="text"] { width: 100%; box-sizing: border-box; padding: 9px 10px; border-radius: 9px; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); background: Canvas; color: inherit; }
+    .switch { justify-self: end; width: 44px; height: 24px; }
+    .actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+    .save { border: 0; border-radius: 10px; padding: 10px 16px; background: #5168ff; color: white; font-weight: 650; cursor: pointer; }
+    .status { font-size: 12px; opacity: .68; }
+    pre { white-space: pre-wrap; padding: 13px; border-radius: 12px; background: color-mix(in srgb, CanvasText 6%, transparent); font-size: 12px; line-height: 1.7; }
+    @media (max-width: 520px) { .row { grid-template-columns: 1fr; } .switch { justify-self: start; } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>模型哨兵</h1>
+    <p class="subtitle">设置会保存在本地。当前任务设置会覆盖全局默认。</p>
+    <nav class="tabs">
+      <button class="tab active" data-tab="global">全局默认</button>
+      <button class="tab" data-tab="task">当前任务</button>
+      <button class="tab" data-tab="commands">命令速查</button>
+    </nav>
+
+    <section class="section active" id="global">
+      <div class="row"><label><strong>新任务自动启用</strong><span>关闭时需在任务中显式启用</span></label><input class="switch" id="autoEnable" type="checkbox"></div>
+      <div class="row"><label><strong>提醒时机</strong><span>控制自动判断与可见提示</span></label><select id="reminderTiming"><option value="on-change">仅需要切换时提醒</option><option value="every-turn">每轮显示判断结果</option><option value="manual">手动检查</option></select></div>
+      <div class="row"><label><strong>模型选择</strong><span>指定由哪个模型完成判断</span></label><select id="modelSelection"><option value="main">跟随主模型</option><option value="independent">独立评估</option><option value="hybrid">智能复核</option></select></div>
+      <div class="row"><label><strong>独立判断模型</strong><span>独立评估或智能复核时使用</span></label><input id="independentModel" type="text" placeholder="例如 gpt-5.6-luna"></div>
+      <div class="row"><label><strong>独立判断深度</strong><span>子 Agent 的推理深度</span></label><select id="independentEffort"><option value="none">none（无）</option><option value="minimal">minimal（极轻）</option><option value="low">low（轻度）</option><option value="medium">medium（中度）</option><option value="high">high（高）</option><option value="xhigh">xhigh（极高）</option><option value="max">max（最高）</option><option value="ultra">ultra（极高·快）</option></select></div>
+      <div class="actions"><button class="save" id="saveGlobal">保存全局设置</button><span class="status" id="globalStatus"></span></div>
+    </section>
+
+    <section class="section" id="task">
+      <div class="row"><label><strong>当前任务启用</strong><span>随时暂停或重新启用</span></label><input class="switch" id="taskEnabled" type="checkbox"></div>
+      <div class="row"><label><strong>当前推理深度</strong><span>无法自动识别时用于判断基准</span></label><select id="currentEffort"><option value="none">none（无）</option><option value="minimal">minimal（极轻）</option><option value="low">low（轻度）</option><option value="medium">medium（中度）</option><option value="high">high（高）</option><option value="xhigh">xhigh（极高）</option><option value="max">max（最高）</option><option value="ultra">ultra（极高·快）</option></select></div>
+      <div class="row"><label><strong>任务配置</strong><span>跟随全局或建立独立覆盖</span></label><select id="overrideMode"><option value="inherit">跟随全局</option><option value="custom">单独覆盖</option></select></div>
+      <div class="actions"><button class="save" id="saveTask">保存当前任务</button><span class="status" id="taskStatus"></span></div>
+    </section>
+
+    <section class="section" id="commands">
+      <pre>$model-watch                         启用当前任务
+$model-watch off（关闭当前任务）
+$model-watch status（查看状态）
+$model-watch settings（打开设置）
+$model-watch check（立即检查）
+$model-watch check-inline（并行检查），&lt;主任务&gt;
+$model-watch gate-next（强制预检），&lt;主任务&gt;
+$model-watch sync high（同步推理深度）</pre>
+    </section>
+  </main>
+  <script>
+    let payload = null;
+    const byId = (id) => document.getElementById(id);
+
+    function render(next) {
+      payload = next?.structuredContent || next || payload;
+      if (!payload?.global) return;
+      byId("autoEnable").checked = payload.global.autoEnableNewTasks;
+      byId("reminderTiming").value = payload.global.reminderTiming;
+      byId("modelSelection").value = payload.global.modelSelection;
+      byId("independentModel").value = payload.global.independentModel || "";
+      byId("independentEffort").value = payload.global.independentEffort;
+      byId("taskEnabled").checked = Boolean(payload.task?.enabled);
+      byId("currentEffort").value = payload.task?.currentEffort || "medium";
+      byId("overrideMode").value = payload.task?.override ? "custom" : "inherit";
+    }
+
+    async function callTool(name, args) {
+      if (window.openai?.callTool) return window.openai.callTool(name, args);
+      const id = crypto.randomUUID();
+      window.parent.postMessage({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } }, "*");
+      return null;
+    }
+
+    document.querySelectorAll(".tab").forEach((button) => button.addEventListener("click", () => {
+      document.querySelectorAll(".tab,.section").forEach((node) => node.classList.remove("active"));
+      button.classList.add("active");
+      byId(button.dataset.tab).classList.add("active");
+    }));
+
+    byId("saveGlobal").addEventListener("click", async () => {
+      const result = await callTool("model_watch_update_settings", {
+        scope: "global",
+        sessionId: payload?.sessionId,
+        patch: {
+          autoEnableNewTasks: byId("autoEnable").checked,
+          reminderTiming: byId("reminderTiming").value,
+          modelSelection: byId("modelSelection").value,
+          independentModel: byId("independentModel").value || null,
+          independentEffort: byId("independentEffort").value
+        }
+      });
+      render(result);
+      byId("globalStatus").textContent = "已保存";
+    });
+
+    byId("saveTask").addEventListener("click", async () => {
+      const result = await callTool("model_watch_update_settings", {
+        scope: "task",
+        sessionId: payload?.sessionId,
+        patch: {
+          enabled: byId("taskEnabled").checked,
+          currentEffort: byId("currentEffort").value,
+          override: byId("overrideMode").value === "custom" ? {
+            reminderTiming: byId("reminderTiming").value,
+            modelSelection: byId("modelSelection").value,
+            independentModel: byId("independentModel").value || null,
+            independentEffort: byId("independentEffort").value
+          } : null
+        }
+      });
+      render(result);
+      byId("taskStatus").textContent = "已保存";
+    });
+
+    window.addEventListener("message", (event) => {
+      const message = event.data;
+      if (message?.method === "ui/notifications/tool-result") render(message.params);
+      if (message?.result?.structuredContent) render(message.result);
+    });
+    render(window.openai?.toolOutput);
+  </script>
+</body>
+</html>

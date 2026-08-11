@@ -1,7 +1,7 @@
 {
   "name": "model-watch",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "private": false,
   "description": "A Codex model and reasoning-effort recommendation assistant for long-running tasks.",
   "type": "module",
   "scripts": {
