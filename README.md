@@ -80,6 +80,46 @@ codex plugin add model-watch@model-watch
 $model-watch
 ```
 
+### 打开可视化设置
+
+重启后新建或重新打开一个任务，输入：
+
+```text
+$model-watch settings
+```
+
+Codex 会调用插件的 `model_watch_open_settings` 工具，并在支持 MCP Apps 的桌面界面中显示中文设置卡片。第一次调用工具时，如出现权限确认，请选择允许。
+
+如果只返回文字设置，按以下顺序检查：
+
+1. 确认已安装 **1.0.3 或更高版本**，并完整退出后重启 Codex。
+2. 在终端运行 `codex mcp list`，确认 `model-watch` 为 `enabled`。
+3. 新建任务后再次输入 `$model-watch settings`；部分已打开的旧任务不会热加载新安装的 MCP 工具。
+4. 当前界面本身不支持 MCP Apps UI 时，继续使用文字设置或自然语言修改，监控能力仍可运行。
+
+从 1.0.1 起，本地 MCP 入口使用插件安装目录作为工作目录。1.0.0 的入口错误使用了 Hook 的路径占位符，可能出现“Skill 已加载、设置卡片工具缺失”的情况。
+
+### 快速更新
+
+后续发布新版本时，不需要先卸载插件。集成者在仓库目录执行：
+
+```bash
+npm run update:plugin
+```
+
+这条命令会刷新已配置的 `model-watch` Marketplace，并重新安装同名插件版本；配置与任务状态保存在独立的数据目录中，不会被更新覆盖。也可以直接执行等价命令：
+
+```bash
+codex plugin marketplace upgrade model-watch
+codex plugin add model-watch@model-watch
+```
+
+如果使用的是本地 Marketplace，刷新步骤可以省略：
+
+```bash
+npm run update:plugin -- --no-refresh
+```
+
 ## 在安装前已经存在的旧任务中启用
 
 旧任务兼容链路已经包含在插件中：`SessionStart(resume)` 负责恢复插件状态，`UserPromptSubmit` 负责接收启用命令。
@@ -112,7 +152,7 @@ $model-watch sync high
 | 新任务自动启用 | 关闭 | 开启 / 关闭 |
 | 提醒时机 | 仅需要切换时提醒 | 仅变化时 / 每轮显示 / 手动检查 |
 | 模型选择 | 跟随主模型 | 跟随主模型 / 独立评估 / 智能复核 |
-| 独立判断模型 | 未设置 | 宿主可用的子 Agent 模型与推理深度 |
+| 独立判断模型与深度 | 未设置 | 宿主提供的子 Agent 模型与推理深度组合 |
 | 当前任务配置 | 跟随全局 | 跟随全局 / 单独覆盖 / 暂停 / 关闭 |
 
 ### 判断环节使用哪个模型

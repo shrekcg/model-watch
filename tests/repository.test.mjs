@@ -22,6 +22,7 @@ test("required repository files exist", () => {
     "plugins/model-watch/skills/model-watch/agents/openai.yaml",
     "plugins/model-watch/scripts/model-watch-hook.mjs",
     "plugins/model-watch/scripts/model-watch-mcp.mjs",
+    "scripts/update-plugin.mjs",
     "plugins/model-watch/ui/settings.html"
   ];
 
@@ -43,6 +44,12 @@ test("README documents existing-task recovery and fork fallback", () => {
   assert.match(readme, /旧任务/);
   assert.match(readme, /\$model-watch/);
   assert.match(readme, /Fork/i);
+});
+
+test("README documents the non-destructive plugin update path", () => {
+  assert.match(readme, /npm run update:plugin/);
+  assert.match(readme, /codex plugin marketplace upgrade model-watch/);
+  assert.match(readme, /codex plugin add model-watch@model-watch/);
 });
 
 test("README local image references resolve", () => {

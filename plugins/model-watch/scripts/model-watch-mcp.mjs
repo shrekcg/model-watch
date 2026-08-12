@@ -7,6 +7,7 @@ import {
   loadGlobalConfig,
   loadTaskState,
   normalizeTaskOverride,
+  resolveLatestTaskSession,
   resolveDataDir,
   saveTaskState,
   updateGlobalConfig,
@@ -14,11 +15,20 @@ import {
 } from "../src/state.mjs";
 
 const SERVER_NAME = "model-watch";
-const SERVER_VERSION = "1.0.0";
-const UI_URI = "ui://model-watch/settings-v1.html";
+const SERVER_VERSION = "1.0.3";
+const UI_URI = "ui://model-watch/settings-v3.html";
 const UI_MIME = "text/html;profile=mcp-app";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DATA_DIR = resolveDataDir();
+const DEFAULT_MODELS = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"];
+
+function availableModels() {
+  const configured = String(process.env.MODEL_WATCH_AVAILABLE_MODELS || "")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+  return configured.length ? [...new Set(configured)] : DEFAULT_MODELS;
+}
 
 const tools = [
   {
@@ -88,9 +98,14 @@ const tools = [
 ];
 
 function statusPayload(sessionId) {
-  const safeSessionId = sessionId || "unknown";
+  const requestedSessionId = typeof sessionId === "string" ? sessionId.trim() : "";
+  const safeSessionId =
+    requestedSessionId && requestedSessionId !== "unknown"
+      ? requestedSessionId
+      : resolveLatestTaskSession(DATA_DIR) || "unknown";
   return {
     sessionId: safeSessionId,
+    availableModels: availableModels(),
     global: loadGlobalConfig(DATA_DIR),
     task: loadTaskState(safeSessionId, DATA_DIR),
     effective: getEffectiveConfig(safeSessionId, DATA_DIR)
@@ -168,7 +183,7 @@ function recordAssessment(args) {
 async function callTool(name, args) {
   try {
     if (name === "model_watch_open_settings") {
-      const payload = statusPayload(args?.sessionId || "unknown");
+      const payload = statusPayload(args?.sessionId || null);
       return toolResult("已打开模型哨兵设置。", payload, {
         ui: { resourceUri: UI_URI },
         "openai/outputTemplate": UI_URI

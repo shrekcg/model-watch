@@ -1,6 +1,6 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, parse, relative, resolve, sep } from "node:path";
 
 export const DEFAULT_GLOBAL_CONFIG = Object.freeze({
   schemaVersion: 1,
@@ -24,9 +24,28 @@ const EFFORTS = new Set([
   "ultra"
 ]);
 
-export function resolveDataDir(env = process.env) {
+function inferPluginDataDir(cwd) {
+  const absoluteCwd = resolve(cwd);
+  const root = parse(absoluteCwd).root;
+  const parts = relative(root, absoluteCwd).split(sep).filter(Boolean);
+  const cacheIndex = parts.lastIndexOf("cache");
+  if (
+    cacheIndex < 1 ||
+    parts[cacheIndex - 1] !== "plugins" ||
+    !parts[cacheIndex + 1] ||
+    !parts[cacheIndex + 2]
+  ) return null;
+
+  const marketplace = parts[cacheIndex + 1];
+  const plugin = parts[cacheIndex + 2];
+  return join(root, ...parts.slice(0, cacheIndex), "data", `${marketplace}-${plugin}`);
+}
+
+export function resolveDataDir(env = process.env, cwd = process.cwd()) {
   const configured = env.MODEL_WATCH_DATA_DIR || env.PLUGIN_DATA || env.CLAUDE_PLUGIN_DATA;
-  return resolve(configured || join(homedir(), ".codex", "model-watch"));
+  const inferred = inferPluginDataDir(cwd);
+  const codexHome = env.CODEX_HOME || join(homedir(), ".codex");
+  return resolve(cwd, configured || inferred || join(codexHome, "model-watch"));
 }
 
 export function sanitizeSessionId(sessionId) {
@@ -40,6 +59,22 @@ function globalPath(dataDir) {
 
 function taskPath(dataDir, sessionId) {
   return join(dataDir, "tasks", `${sanitizeSessionId(sessionId)}.json`);
+}
+
+export function resolveLatestTaskSession(dataDir = resolveDataDir()) {
+  try {
+    const tasksDir = join(dataDir, "tasks");
+    const candidates = readdirSync(tasksDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map((entry) => {
+        const path = join(tasksDir, entry.name);
+        return { sessionId: entry.name.slice(0, -5), modifiedAt: statSync(path).mtimeMs };
+      })
+      .sort((left, right) => right.modifiedAt - left.modifiedAt);
+    return candidates[0]?.sessionId || null;
+  } catch {
+    return null;
+  }
 }
 
 function readJson(path, fallback) {

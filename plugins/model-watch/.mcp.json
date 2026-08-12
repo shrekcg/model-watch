@@ -1,8 +1,9 @@
 {
   "mcpServers": {
     "model-watch": {
+      "cwd": ".",
       "command": "node",
-      "args": ["${PLUGIN_ROOT}/scripts/model-watch-mcp.mjs"]
+      "args": ["./scripts/model-watch-mcp.mjs"]
     }
   }
 }

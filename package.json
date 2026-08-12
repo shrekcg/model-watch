@@ -1,11 +1,12 @@
 {
   "name": "model-watch",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "private": false,
   "description": "A Codex model and reasoning-effort recommendation assistant for long-running tasks.",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "update:plugin": "node scripts/update-plugin.mjs"
   },
   "engines": {
     "node": ">=20"

@@ -142,7 +142,7 @@ rationale: string
 
 ### `$model-watch settings（打开设置）`
 
-调用 `model_watch_open_settings`。宿主无法渲染 UI 时，用文字列出当前设置，并说明可继续用自然语言要求修改。
+调用 `model_watch_open_settings`，并在 Hook 上下文可用时传入内部 `session_id`。宿主无法渲染 UI 时，用文字列出当前设置，并说明可继续用自然语言要求修改。不要向用户显示 `session_id`。
 
 ### `$model-watch check（立即检查）`
 

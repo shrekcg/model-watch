@@ -1,6 +1,6 @@
 {
   "name": "model-watch",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "在 Codex 长任务中按需建议下一轮模型与推理深度。",
   "author": {
     "name": "Shrek Wu",

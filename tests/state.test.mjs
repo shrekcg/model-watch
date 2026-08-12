@@ -8,6 +8,8 @@ import {
   getEffectiveConfig,
   loadGlobalConfig,
   loadTaskState,
+  resolveLatestTaskSession,
+  resolveDataDir,
   saveTaskState,
   updateGlobalConfig
 } from "../plugins/model-watch/src/state.mjs";
@@ -42,3 +44,24 @@ test("state path sanitizes session ids", () => withDataDir((dataDir) => {
   const saved = saveTaskState("../../unsafe/session", task, dataDir);
   assert.equal(saved.sessionId.includes("/"), false);
 }));
+
+test("resolves the most recently updated task when the UI has no session id", () => withDataDir((dataDir) => {
+  saveTaskState("older-task", loadTaskState("older-task", dataDir), dataDir);
+  saveTaskState("current-task", { ...loadTaskState("current-task", dataDir), enabled: true }, dataDir);
+  assert.equal(resolveLatestTaskSession(dataDir), "current-task");
+}));
+
+test("bundled MCP and hooks resolve the same plugin data directory", () => {
+  const pluginData = join(tmpdir(), "codex-home", "plugins", "data", "model-watch-model-watch");
+  const cacheRoot = join(
+    tmpdir(),
+    "codex-home",
+    "plugins",
+    "cache",
+    "model-watch",
+    "model-watch",
+    "1.0.1"
+  );
+  assert.equal(resolveDataDir({}, cacheRoot), pluginData);
+  assert.equal(resolveDataDir({ PLUGIN_DATA: pluginData }, "/unrelated"), pluginData);
+});
