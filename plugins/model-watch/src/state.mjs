@@ -3,7 +3,6 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
-  readdirSync,
   renameSync,
   statSync,
   unlinkSync,
@@ -14,13 +13,14 @@ import { homedir } from "node:os";
 import { dirname, join, parse, relative, resolve, sep } from "node:path";
 
 export const DEFAULT_GLOBAL_CONFIG = Object.freeze({
-  schemaVersion: 3,
+  schemaVersion: 4,
   autoEnableNewTasks: false,
   showStatusIndicator: true
 });
 
 const ASSESSMENT_STATUSES = new Set(["stay", "change", "uncertain", "failed"]);
-const OBSERVATION_RESULTS = new Set(["adopted", "kept", "other", "superseded"]);
+const OBSERVATION_RESULTS = new Set(["adopted", "kept", "other", "superseded", "expired", "cancelled"]);
+const HISTORY_LIMIT = 12;
 const TICKET_TTL_MS = 15 * 60 * 1000;
 const LOCK_WAIT_MS = 5_000;
 const INVALID_LOCK_STALE_MS = 30_000;
@@ -62,21 +62,6 @@ function globalPath(dataDir) {
 
 function taskPath(dataDir, sessionId) {
   return join(dataDir, "tasks", `${sanitizeSessionId(sessionId)}.json`);
-}
-
-export function resolveLatestTaskSession(dataDir = resolveDataDir()) {
-  try {
-    const tasksDir = join(dataDir, "tasks");
-    return readdirSync(tasksDir, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-      .map((entry) => {
-        const path = join(tasksDir, entry.name);
-        return { sessionId: entry.name.slice(0, -5), modifiedAt: statSync(path).mtimeMs };
-      })
-      .sort((left, right) => right.modifiedAt - left.modifiedAt)[0]?.sessionId || null;
-  } catch {
-    return null;
-  }
 }
 
 function readJson(path, fallback) {
@@ -162,7 +147,7 @@ export function updateGlobalConfig(patch, dataDir = resolveDataDir()) {
 export function createTaskState(sessionId, enabled = false) {
   const now = new Date().toISOString();
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     sessionId: sanitizeSessionId(sessionId),
     enabled: Boolean(enabled),
     paused: false,
@@ -171,6 +156,7 @@ export function createTaskState(sessionId, enabled = false) {
     activeRequest: null,
     routeTicket: null,
     lastAssessment: null,
+    assessmentHistory: [],
     observationHistory: [],
     createdAt: now,
     updatedAt: now
@@ -222,7 +208,7 @@ export function getEffectiveConfig(sessionId, dataDir = resolveDataDir()) {
 
 export function normalizeGlobalConfig(config) {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     autoEnableNewTasks: Boolean(config.autoEnableNewTasks),
     showStatusIndicator: config.showStatusIndicator !== false
   };
@@ -244,7 +230,7 @@ export function normalizeTaskOverride(patch) {
 function normalizeTaskState(state, sessionId) {
   const now = new Date().toISOString();
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     sessionId: sanitizeSessionId(sessionId),
     enabled: Boolean(state.enabled),
     paused: Boolean(state.paused),
@@ -253,6 +239,7 @@ function normalizeTaskState(state, sessionId) {
     activeRequest: normalizeActiveRequest(state.activeRequest),
     routeTicket: normalizeRouteTicket(state.routeTicket),
     lastAssessment: normalizeAssessment(state.lastAssessment),
+    assessmentHistory: normalizeAssessmentHistory(state.assessmentHistory),
     observationHistory: normalizeObservationHistory(state.observationHistory),
     createdAt: typeof state.createdAt === "string" ? state.createdAt : now,
     updatedAt: now
@@ -265,6 +252,7 @@ function normalizeActiveRequest(request) {
     turnId: cleanString(request.turnId, 200),
     promptHash: cleanHash(request.promptHash),
     originalModel: cleanString(request.originalModel, 160),
+    commandAction: cleanCommandAction(request.commandAction),
     createdAt: typeof request.createdAt === "string" ? request.createdAt : new Date().toISOString()
   };
 }
@@ -272,8 +260,9 @@ function normalizeActiveRequest(request) {
 function normalizeRouteTicket(ticket) {
   if (!ticket || typeof ticket !== "object") return null;
   const expiresAt = typeof ticket.expiresAt === "string" ? ticket.expiresAt : null;
-  if (!expiresAt || Date.parse(expiresAt) <= Date.now()) return null;
+  if (!expiresAt || Number.isNaN(Date.parse(expiresAt))) return null;
   return {
+    assessmentId: cleanString(ticket.assessmentId, 80),
     turnId: cleanString(ticket.turnId, 200),
     promptHash: cleanHash(ticket.promptHash),
     originalModel: cleanString(ticket.originalModel, 160),
@@ -283,10 +272,11 @@ function normalizeRouteTicket(ticket) {
   };
 }
 
-export function createRouteTicket(activeRequest, recommendedModel, now = Date.now()) {
+export function createRouteTicket(activeRequest, recommendedModel, now = Date.now(), assessmentId = null) {
   if (!activeRequest?.promptHash || !recommendedModel) return null;
   return normalizeRouteTicket({
     ...activeRequest,
+    assessmentId,
     recommendedModel,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + TICKET_TTL_MS).toISOString()
@@ -296,6 +286,11 @@ export function createRouteTicket(activeRequest, recommendedModel, now = Date.no
 export function normalizeAssessment(assessment) {
   if (!assessment || typeof assessment !== "object") return null;
   return {
+    assessmentId: cleanString(assessment.assessmentId, 80),
+    turnId: cleanString(assessment.turnId, 200),
+    promptHash: cleanHash(assessment.promptHash),
+    originalModel: cleanString(assessment.originalModel, 160),
+    availableModels: normalizeModelList(assessment.availableModels),
     status: ASSESSMENT_STATUSES.has(assessment.status) ? assessment.status : "failed",
     recommendedModel: cleanString(assessment.recommendedModel, 160),
     rationale: cleanString(assessment.rationale, 600) || "未提供原因",
@@ -307,16 +302,25 @@ export function normalizeAssessment(assessment) {
   };
 }
 
+function normalizeAssessmentHistory(history) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .map(normalizeAssessment)
+    .filter(Boolean)
+    .slice(-HISTORY_LIMIT);
+}
+
 export function appendObservation(task, observation) {
   const result = OBSERVATION_RESULTS.has(observation.result) ? observation.result : "other";
   const entry = {
     result,
+    assessmentId: cleanString(observation.assessmentId, 80),
     originalModel: cleanString(observation.originalModel, 160),
     recommendedModel: cleanString(observation.recommendedModel, 160),
     actualModel: cleanString(observation.actualModel, 160),
     createdAt: new Date().toISOString()
   };
-  task.observationHistory = [...normalizeObservationHistory(task.observationHistory), entry].slice(-12);
+  task.observationHistory = [...normalizeObservationHistory(task.observationHistory), entry].slice(-HISTORY_LIMIT);
   return entry;
 }
 
@@ -326,12 +330,18 @@ function normalizeObservationHistory(history) {
     .filter((entry) => entry && typeof entry === "object" && OBSERVATION_RESULTS.has(entry.result))
     .map((entry) => ({
       result: entry.result,
+      assessmentId: cleanString(entry.assessmentId, 80),
       originalModel: cleanString(entry.originalModel, 160),
       recommendedModel: cleanString(entry.recommendedModel, 160),
       actualModel: cleanString(entry.actualModel, 160),
       createdAt: typeof entry.createdAt === "string" ? entry.createdAt : new Date(0).toISOString()
     }))
-    .slice(-12);
+    .slice(-HISTORY_LIMIT);
+}
+
+function normalizeModelList(models) {
+  if (!Array.isArray(models)) return [];
+  return [...new Set(models.map((model) => cleanString(model, 160)).filter(Boolean))].slice(0, 20);
 }
 
 function cleanString(value, maxLength) {
@@ -340,4 +350,8 @@ function cleanString(value, maxLength) {
 
 function cleanHash(value) {
   return typeof value === "string" && /^[a-f0-9]{64}$/u.test(value) ? value : null;
+}
+
+function cleanCommandAction(value) {
+  return ["check", "check-inline"].includes(value) ? value : null;
 }

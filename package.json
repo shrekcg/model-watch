@@ -1,6 +1,6 @@
 {
   "name": "model-watch",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": false,
   "description": "A pre-task model recommendation sentinel for Codex conversations and workflows.",
   "type": "module",

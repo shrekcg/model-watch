@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 import { parseModelWatchCommand } from "../src/commands.mjs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { hashPrompt } from "../src/engine.mjs";
+import { availableModelsFromEnv, modelIdsEqual } from "../src/models.mjs";
 import {
   buildMonitoringContext,
-  buildSessionContext,
-  statusIndicatorInstruction
+  buildPausedContext,
+  buildSessionContext
 } from "../src/protocol.mjs";
 import {
   appendObservation,
@@ -16,7 +19,7 @@ import {
   taskStateExists
 } from "../src/state.mjs";
 
-const DEFAULT_MODELS = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"];
+const PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 async function readInput() {
   let input = "";
@@ -41,26 +44,19 @@ function modelFrom(input) {
   return candidates.find((value) => typeof value === "string" && value.trim())?.trim() || null;
 }
 
-function availableModels() {
-  const configured = String(process.env.MODEL_WATCH_AVAILABLE_MODELS || "")
-    .split(",")
-    .map((model) => model.trim())
-    .filter(Boolean);
-  return configured.length ? [...new Set(configured)] : DEFAULT_MODELS;
-}
-
-function observeTicket(task, actualModel, routeMatched) {
+function observeTicket(task, actualModel, routeMatched, resultOverride = null) {
   const ticket = task.routeTicket;
   if (!ticket) return;
-  const result = !routeMatched
+  const result = resultOverride || (!routeMatched
     ? "superseded"
-    : actualModel === ticket.recommendedModel
+    : modelIdsEqual(actualModel, ticket.recommendedModel)
       ? "adopted"
-      : actualModel === ticket.originalModel
+      : modelIdsEqual(actualModel, ticket.originalModel)
         ? "kept"
-        : "other";
+        : "other");
   appendObservation(task, {
     result,
+    assessmentId: ticket.assessmentId,
     originalModel: ticket.originalModel,
     recommendedModel: ticket.recommendedModel,
     actualModel
@@ -99,16 +95,24 @@ async function handleUserPrompt(input, dataDir) {
   if (!existed && loadGlobalConfig(dataDir).autoEnableNewTasks) task.enabled = true;
 
   if (command?.action === "on") { task.enabled = true; task.paused = false; }
-  if (command?.action === "off") { task.enabled = false; task.paused = false; task.routeTicket = null; }
+  if (command?.action === "off") {
+    observeTicket(task, model || task.currentModel, false, "cancelled");
+    task.enabled = false;
+    task.paused = false;
+    task.routeTicket = null;
+  }
   if (command?.action === "pause") task.paused = true;
   if (command?.action === "resume") { task.enabled = true; task.paused = false; }
 
   if (!task.enabled && !command) return continueOutput("UserPromptSubmit");
 
   const promptHash = hashPrompt(command?.remainder || prompt);
-  const routeMatched = Boolean(task.routeTicket?.promptHash === promptHash);
+  const routeExpired = Boolean(task.routeTicket?.expiresAt && Date.parse(task.routeTicket.expiresAt) <= Date.now());
+  const routeMatched = Boolean(!routeExpired && task.routeTicket?.expiresAt
+    && Date.parse(task.routeTicket.expiresAt) > Date.now()
+    && task.routeTicket.promptHash === promptHash);
   if (task.routeTicket) {
-    observeTicket(task, model, routeMatched);
+    observeTicket(task, model, routeMatched, routeMatched ? null : routeExpired ? "expired" : "superseded");
     task.routeTicket = null;
   }
   const currentModel = model || task.currentModel;
@@ -117,6 +121,7 @@ async function handleUserPrompt(input, dataDir) {
     turnId: String(input.turn_id || input.turnId || "unknown"),
     promptHash,
     originalModel: currentModel,
+    commandAction: command?.action || null,
     createdAt: new Date().toISOString()
   };
   task = mutateTaskState(sessionId, () => task, dataDir);
@@ -127,7 +132,7 @@ async function handleUserPrompt(input, dataDir) {
       buildMonitoringContext({
         sessionId,
         model,
-        availableModels: availableModels(),
+        availableModels: availableModelsFromEnv(),
         task,
         config: getEffectiveConfig(sessionId, dataDir),
         command
@@ -141,7 +146,7 @@ async function handleUserPrompt(input, dataDir) {
       buildMonitoringContext({
         sessionId,
         model,
-        availableModels: availableModels(),
+        availableModels: availableModelsFromEnv(),
         task,
         config,
         command,
@@ -150,14 +155,14 @@ async function handleUserPrompt(input, dataDir) {
     );
   }
   if (task.paused) {
-    return continueOutput("UserPromptSubmit", statusIndicatorInstruction(task, config));
+    return continueOutput("UserPromptSubmit", buildPausedContext({ task, config, command }));
   }
   return continueOutput(
     "UserPromptSubmit",
     buildMonitoringContext({
       sessionId,
       model,
-      availableModels: availableModels(),
+      availableModels: availableModelsFromEnv(),
       task,
       config,
       command
@@ -181,7 +186,9 @@ function handleCompact(input, dataDir, eventName) {
 
 try {
   const input = await readInput();
-  const dataDir = resolveDataDir();
+  // Hooks may inherit a user-workspace cwd while MCP starts from PLUGIN_ROOT.
+  // Anchor both processes at the installed plugin root before resolving data.
+  const dataDir = resolveDataDir(process.env, PLUGIN_ROOT);
   const eventName = String(input.hook_event_name || input.hookEventName || "");
   if (eventName === "SessionStart") handleSessionStart(input, dataDir);
   else if (eventName === "UserPromptSubmit") await handleUserPrompt(input, dataDir);

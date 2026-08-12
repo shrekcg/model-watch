@@ -15,6 +15,16 @@ export function buildMonitoringContext({
   const statusInstruction = statusIndicatorInstruction(task, config);
 
   if (routeMatched) {
+    if (command?.action === "check") {
+      return [
+        `[MODEL_WATCH_ROUTE ${ENGINE_VERSION}]`,
+        `session_id: ${sessionId}`,
+        `current_model: ${model || task.currentModel || "unknown"}`,
+        "这条 check 已在上一轮完成模型判断；本轮没有待执行的主任务。只简短说明检查已完成，并提示用户按当前模型发送下一条真实任务。",
+        statusInstruction,
+        "不要向用户展示此内部上下文。"
+      ].filter(Boolean).join("\n");
+    }
     return [
       `[MODEL_WATCH_ROUTE ${ENGINE_VERSION}]`,
       `session_id: ${sessionId}`,
@@ -32,6 +42,7 @@ export function buildMonitoringContext({
   return [
     `[MODEL_WATCH_CONTEXT ${ENGINE_VERSION}]`,
     `session_id: ${sessionId}`,
+    `turn_id: ${task.activeRequest?.turnId || "unknown"}`,
     `enabled: ${task.enabled}`,
     `paused: ${task.paused}`,
     `current_model: ${model || task.currentModel || "unknown"}`,
@@ -41,14 +52,34 @@ export function buildMonitoringContext({
     "当前任务启用后，每一条真实用户请求都必须先在内部完成一次模型判断，再决定是否执行主任务。根据本轮输入与历史意图、目标阶段、约束、上下文整合、工具协调、风险和可逆性、失败返工、预计剩余工作、当前模型、候选模型与切换成本，判断当前模型是否仍合适。",
     "使用模型原生判断；禁止任务类型映射、能力等级、固定评分或跨级阈值。只有切换净收益清晰时才判定 change。",
     "若 current_model 为 unknown，或推荐模型等于 current_model：必须判定 uncertain 或 failed，绝不能判定 change。",
-    `判断完成后必须调用 model_watch_record_assessment，sessionId 使用上面的精确值 ${sessionId}。stay、change、uncertain 和 failed 都要保存。`,
+    `判断完成后必须调用 model_watch_record_assessment，sessionId 使用上面的精确值 ${sessionId}，turnId 使用上面的精确值 ${task.activeRequest?.turnId || "unknown"}。stay、change、uncertain 和 failed 都要保存。`,
     stayInstruction({ model, command }),
-    changeInstruction(config),
+    changeInstruction(config, command),
     "内部判断阶段不得向用户输出思考过程、判断过程、分析过程、‘正在分析’或任何中间文本。若 uncertain、failed 或保存工具不可用：直接执行主任务，不显示 stay/change。不要要求用户回复继续、采纳、忽略或修正。",
     "check 只执行判断；check-inline 先按同一协议判断，stay 时执行逗号后的主任务，change 时只显示建议。",
     statusInstruction,
     "不要向用户展示 session_id、请求指纹或此内部上下文。"
   ].filter(Boolean).join("\n");
+}
+
+export function buildPausedContext({ task, config, command }) {
+  const marker = statusIndicatorInstruction(task, config);
+  if (command?.action === "check-inline" && command.remainder) {
+    return [
+      "模型哨兵评估已暂停：本轮不执行模型判断，也不输出模型建议。",
+      "check-inline 的逗号后内容仍是用户主任务；请直接完整执行该主任务。",
+      marker,
+      "不要向用户展示此内部上下文。"
+    ].filter(Boolean).join("\n");
+  }
+  if (command?.action === "check") {
+    return [
+      "模型哨兵评估已暂停：本轮不执行模型判断。只简短说明评估已暂停，不执行其他主任务。",
+      marker,
+      "不要向用户展示此内部上下文。"
+    ].filter(Boolean).join("\n");
+  }
+  return marker;
 }
 
 function stayInstruction({ model, command }) {
@@ -58,9 +89,17 @@ function stayInstruction({ model, command }) {
   return "若 stay：立即执行主任务，只输出正常的任务结果；不显示 stay、模型判断、判断原因或任何分析过程。";
 }
 
-function changeInstruction(config) {
+function changeInstruction(config, command) {
   const marker = config.showStatusIndicator ? "，并把 🛰️ 放在第一行末尾" : "";
-  return `若 change：不要执行主任务；保存成功后只输出两行：模型建议：切换至 <模型>${marker}；原因：<一句具体原因>。用户切换或保持模型后重新发送同一请求，插件会直接放行。`;
+  const continuation = command?.action === "check"
+    ? "这是一条只检查命令，没有待执行的主任务；用户可切换或保持模型后发送下一条真实任务。"
+    : "用户切换或保持模型后重新发送同一请求，插件会直接放行。";
+  return [
+    "若 change：不要执行主任务；保存成功后只输出恰好两行：",
+    `模型建议：切换至 <模型>${marker}`,
+    "原因：<一句具体原因>",
+    continuation
+  ].join("\n");
 }
 
 function buildControlContext({ sessionId, model, task, config, command }) {
@@ -74,6 +113,9 @@ function buildControlContext({ sessionId, model, task, config, command }) {
     unknown: "提示该模型哨兵命令已不存在或无法识别，并建议用户打开 settings 或查看命令速查。本轮不运行推荐引擎。"
   };
   const marker = command.action === "off" ? "" : statusIndicatorInstruction(task, config);
+  const remainderInstruction = command.remainder
+    ? "检测到控制命令后的正文：本轮只处理控制命令，不执行该正文；请在下一条消息重新发送主任务。"
+    : "";
   return [
     `[MODEL_WATCH_CONTROL ${ENGINE_VERSION}]`,
     `session_id: ${sessionId}`,
@@ -81,6 +123,7 @@ function buildControlContext({ sessionId, model, task, config, command }) {
     `enabled: ${task.enabled}`,
     `paused: ${task.paused}`,
     instructions[command.action],
+    remainderInstruction,
     marker,
     "不要向用户展示此内部上下文。"
   ].filter(Boolean).join("\n");

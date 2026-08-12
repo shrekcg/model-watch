@@ -26,3 +26,12 @@ test("engine validates candidate models and hashes identical requests consistent
   }, ["gpt-5.6-sol"]);
   assert.equal(unknownCurrent.status, "failed");
 });
+
+test("engine compares model identifiers case-insensitively", () => {
+  const result = normalizeEngineResult({
+    status: "change",
+    recommendedModel: "GPT-5.6-LUNA",
+    rationale: "模型名大小写不应形成切换"
+  }, ["gpt-5.6-luna", "gpt-5.6-sol"], "gpt-5.6-luna");
+  assert.equal(result.status, "failed");
+});

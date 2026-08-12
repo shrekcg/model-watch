@@ -1,12 +1,12 @@
-# 模型哨兵交接说明（v1.1.0）
+# 模型哨兵交接说明（v1.1.1）
 
 更新时间：2026-08-13
 
 ## 当前基线
 
 - 仓库：`https://github.com/shrekcg/model-watch`
-- 发布分支：`agent/model-watch-1.0.3-update`
-- 发布版本：`v1.1.0`
+- 稳定分支：`main`
+- 发布版本：`v1.1.1`
 - 一期评估器：当前主 Agent 的同会话模型；不启动子 Agent，不调用外部评估服务。
 
 ## 已交付的工作流
@@ -24,16 +24,14 @@
 
 - `plugins/model-watch/scripts/model-watch-hook.mjs`：会话和模型采集、请求匹配、协议注入。
 - `plugins/model-watch/scripts/model-watch-mcp.mjs`：基于官方 `@modelcontextprotocol/sdk` 的 MCP 工具与设置 UI。
-- `plugins/model-watch/src/state.mjs`：schema 迁移、TTL、观察记录、原子写入和 PID + token 文件锁。
+- `plugins/model-watch/src/state.mjs`：schema v4 迁移、TTL、最近 12 条可关联评估/观察记录、原子写入和 PID + token 文件锁；Hook 与 MCP 都以插件根目录推导同一数据目录。
 - 所有任务级读写要求精确 `sessionId`，禁止回退到最近任务，避免多会话串写。
+- 每条评估必须绑定 Hook 的精确 `turnId`，迟到结果会被拒绝；观察记录通过评估 ID 关联采纳、保持、超时、替代或关闭。
 - 本地状态仅存 SHA-256 指纹与模型元数据；不存正文和附件，不能用它们恢复原始请求。
 
 ## 已验证
 
-```text
-npm test          34 passed, 0 failed
-git diff --check  passed
-```
+自动测试基线会随本地改动递增；提交前运行 `npm test` 与 `git diff --check`，不要引用过期的固定通过数量。
 
 自动测试验证命令解析、协议、状态迁移、精确会话隔离、锁、MCP SDK、设置同步、同一请求续跑与模型观察。真实桌面端仍需按 `docs/manual-test-cases.md` 验证 Hook 信任、热加载、模型身份采集以及附件重发体验。
 
@@ -44,12 +42,13 @@ git diff --check  passed
 - 建议卡片中的“继续原请求”按钮与无损附件重放；
 - 从宿主动态获取候选模型；
 - 评估准确率或切换阈值的产品校准。
+- 附件指纹、字节级重放或跨会话上下文无损保证；这些依赖宿主能力，必须桌面端实测。
 
-后续若扩展评估器，必须先定义独立的成本、超时、失败放行、数据边界与会话一致性契约，不能改变 v1.1.0 主路径的按需启用和人工选择权。
+后续若扩展评估器，必须先定义独立的成本、超时、失败放行、数据边界与会话一致性契约，不能改变 v1.1.1 主路径的按需启用和人工选择权。
 
 ## 接手检查清单
 
-1. 阅读 `README.md`、`MEMORY.md`、`docs/manual-test-cases.md` 和本文件。
+1. 阅读 `README.md`、`docs/agent-review-guide.md`、`docs/agent-review-report.md`、`MEMORY.md`、`docs/manual-test-cases.md` 和本文件。
 2. 不要执行 `git reset --hard` 或覆盖工作区；先检查 `git status --short --branch`。
 3. 运行 `npm ci`、`npm ci --prefix plugins/model-watch`、`npm test`、`git diff --check`。
 4. 改动插件后运行 `npm run update:plugin -- --no-refresh`，重启 Codex 并重新确认 Hook 信任。

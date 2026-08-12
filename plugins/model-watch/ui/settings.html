@@ -53,6 +53,8 @@
     .conditional[hidden] { display:none; }
     .conditional-note { padding:7px 10px 4px; color:var(--muted); font-size:10.5px; line-height:1.4; }
     .actions { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:13px; }
+    .assessment-summary { margin-top:10px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--muted); font-size:10.5px; line-height:1.55; }
+    .assessment-summary strong { color:CanvasText; }
     .save { padding:8px 16px; border:0; border-radius:9px; background:var(--accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer; }
     .status { min-height:16px; color:var(--muted); font-size:11px; }
     pre { margin:0; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--panel); font-size:11px; line-height:1.8; white-space:pre-wrap; }
@@ -106,6 +108,7 @@
           <div class="conditional-note">以下设置只对当前任务生效。</div>
           <div class="row"><label for="taskStatusIndicator"><strong>显示运行标识</strong><span>开启显示 🛰️ / 🛰️⏸️。</span></label><div class="switch-wrap"><label class="switch" aria-label="当前任务显示运行标识"><input id="taskStatusIndicator" type="checkbox"><svg class="off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="12" cy="12" r="8"/></svg><svg class="on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="32" cy="12" r="8"/></svg></label></div></div>
         </div>
+        <div class="assessment-summary" id="assessmentSummary">尚无可展示的评估记录。</div>
       </div>
       <div class="actions"><span class="status" id="saveStatus" aria-live="polite"></span><button class="save" id="saveSettings" type="button">保存设置</button></div>
     </section>
@@ -125,7 +128,7 @@
   <script>
     let payload=null,nextRequestId=1; const pendingRequests=new Map(); const byId=(id)=>document.getElementById(id);
     function toggle(){byId("taskOverride").hidden=byId("taskConfigMode").value!=="custom"}
-    function render(next){payload=next?.structuredContent||next||payload;if(!payload?.global)return;const g=payload.global,t=payload.task||{},o=t.override||{};byId("globalAutoEnable").checked=!!g.autoEnableNewTasks;byId("globalStatusIndicator").checked=g.showStatusIndicator!==false;byId("taskEnabled").checked=!!t.enabled;byId("taskPaused").checked=!!t.paused;byId("taskConfigMode").value=t.override?"custom":"inherit";byId("taskStatusIndicator").checked=(o.showStatusIndicator??g.showStatusIndicator)!==false;const dot=byId("taskStatusDot"),text=byId("taskStatusText");dot.className="status-dot"+(t.paused?" paused":t.enabled?" enabled":"");text.textContent=t.paused?"哨兵已暂停":t.enabled?"哨兵运行中":"当前任务未启用";toggle()}
+    function render(next){payload=next?.structuredContent||next||payload;if(!payload?.global)return;const g=payload.global,t=payload.task||{},o=t.override||{};byId("globalAutoEnable").checked=!!g.autoEnableNewTasks;byId("globalStatusIndicator").checked=g.showStatusIndicator!==false;byId("taskEnabled").checked=!!t.enabled;byId("taskPaused").checked=!!t.paused;byId("taskConfigMode").value=t.override?"custom":"inherit";byId("taskStatusIndicator").checked=(o.showStatusIndicator??g.showStatusIndicator)!==false;const dot=byId("taskStatusDot"),text=byId("taskStatusText");dot.className="status-dot"+(t.paused?" paused":t.enabled?" enabled":"");text.textContent=t.paused?"哨兵已暂停":t.enabled?"哨兵运行中":"当前任务未启用";const latest=t.lastAssessment,history=Array.isArray(t.assessmentHistory)?t.assessmentHistory:[],observations=Array.isArray(t.observationHistory)?t.observationHistory:[];byId("assessmentSummary").textContent=latest?`最近判断：${latest.status}${latest.recommendedModel?`，建议 ${latest.recommendedModel}`:""}。原因：${latest.rationale}。已保留 ${history.length} 条评估与 ${observations.length} 条实际选择记录；不保存任务正文或附件。`:"尚无可展示的评估记录。";toggle()}
     async function callTool(name,args){if(window.openai?.callTool)return window.openai.callTool(name,args);const id=nextRequestId++;window.parent.postMessage({jsonrpc:"2.0",id,method:"tools/call",params:{name,arguments:args}},"*");return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{pendingRequests.delete(id);reject(new Error("工具调用超时"))},10000);pendingRequests.set(id,{resolve(v){clearTimeout(timeout);resolve(v)},reject(e){clearTimeout(timeout);reject(e)}})})}
     document.querySelectorAll(".tab").forEach((button)=>button.addEventListener("click",()=>{document.querySelectorAll(".tab,.section").forEach((node)=>node.classList.remove("active"));button.classList.add("active");byId(button.dataset.tab).classList.add("active")}));
     byId("taskConfigMode").addEventListener("change",toggle);

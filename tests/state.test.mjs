@@ -12,7 +12,6 @@ import {
   loadTaskState,
   mutateTaskState,
   resolveDataDir,
-  resolveLatestTaskSession,
   saveTaskState,
   updateGlobalConfig
 } from "../plugins/model-watch/src/state.mjs";
@@ -75,11 +74,13 @@ test("state paths and plugin data directory stay scoped", () => withDataDir((dat
   const task = loadTaskState("../../unsafe/session", dataDir);
   const saved = saveTaskState("../../unsafe/session", { ...task, enabled: true }, dataDir);
   assert.equal(saved.sessionId.includes("/"), false);
-  saveTaskState("current-task", loadTaskState("current-task", dataDir), dataDir);
-  assert.equal(resolveLatestTaskSession(dataDir), "current-task");
   const pluginData = join(tmpdir(), "codex-home", "plugins", "data", "model-watch-model-watch");
   const cacheRoot = join(tmpdir(), "codex-home", "plugins", "cache", "model-watch", "model-watch", "1.1.0");
   assert.equal(resolveDataDir({}, cacheRoot), pluginData);
+  assert.equal(
+    resolveDataDir({ CODEX_HOME: join(tmpdir(), "explicit-codex-home") }, join(tmpdir(), "unrelated-workspace")),
+    join(tmpdir(), "explicit-codex-home", "model-watch")
+  );
 }));
 
 test("dead owners do not leave task locks behind", () => withDataDir((dataDir) => {

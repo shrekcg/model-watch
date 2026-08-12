@@ -11,6 +11,9 @@ test("required repository files exist", () => {
   const requiredFiles = [
     "README.md",
     "CONTRIBUTING.md",
+    "HANDOFF.md",
+    "docs/agent-review-guide.md",
+    "docs/agent-review-report.md",
     "docs/manual-test-cases.md",
     "LICENSE",
     "package.json",
@@ -46,7 +49,7 @@ test("plugin manifest points to real bundled capabilities", () => {
 test("plugin menu uses a hook-recognized command that does not trigger plugin autocomplete", () => {
   const manifest = JSON.parse(readFileSync(resolve(root, "plugins/model-watch/.codex-plugin/plugin.json"), "utf8"));
   const agent = readFileSync(resolve(root, "plugins/model-watch/skills/model-watch/agents/openai.yaml"), "utf8");
-  assert.deepEqual(manifest.interface.defaultPrompt, ["!model-watch on", "!model-watch settings"]);
+  assert.deepEqual(manifest.interface.defaultPrompt, ["!model-watch on"]);
   assert.match(agent, /^\s*default_prompt:\s*"!model-watch on"\s*$/m);
 });
 
@@ -86,6 +89,23 @@ test("README documents the non-destructive plugin update path", () => {
   assert.match(readme, /npm run update:plugin/);
   assert.match(readme, /npm ci --prefix plugins\/model-watch/);
   assert.match(readme, /codex plugin add model-watch@model-watch/);
+});
+
+test("README documents the static candidate-model boundary", () => {
+  assert.match(readme, /MODEL_WATCH_AVAILABLE_MODELS/);
+  assert.match(readme, /gpt-5\.6-luna/);
+  assert.match(readme, /不是 Codex 宿主动态返回的模型列表/);
+});
+
+test("hook metadata and both runtime entrypoints share the plugin-root data contract", () => {
+  const hooks = JSON.parse(readFileSync(resolve(root, "plugins/model-watch/hooks/hooks.json"), "utf8"));
+  const userPromptHook = hooks.hooks.UserPromptSubmit[0].hooks[0];
+  const hookScript = readFileSync(resolve(root, "plugins/model-watch/scripts/model-watch-hook.mjs"), "utf8");
+  const mcpScript = readFileSync(resolve(root, "plugins/model-watch/scripts/model-watch-mcp.mjs"), "utf8");
+  assert.match(hooks.description, /同会话模型判断协议/);
+  assert.ok(userPromptHook.additionalContextLimit >= 2400);
+  assert.match(hookScript, /resolveDataDir\(process\.env, PLUGIN_ROOT\)/);
+  assert.match(mcpScript, /resolveDataDir\(process\.env, ROOT\)/);
 });
 
 test("README local image references resolve", () => {

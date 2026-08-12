@@ -91,6 +91,22 @@ test("pause bypasses evaluation and shows the paused marker", () => withDataDir(
   assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /推荐引擎/);
 }));
 
+test("paused check-inline executes its task without evaluating", () => withDataDir((dataDir) => {
+  runHook(dataDir, promptInput("paused-inline", "!model-watch on"));
+  runHook(dataDir, promptInput("paused-inline", "!model-watch pause"));
+  const output = runHook(dataDir, promptInput("paused-inline", "!model-watch check-inline，整理这段文案"));
+  assert.match(output.hookSpecificOutput.additionalContext, /评估已暂停/);
+  assert.match(output.hookSpecificOutput.additionalContext, /直接完整执行该主任务/);
+  assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /通用的推荐引擎/);
+}));
+
+test("control commands with trailing text explicitly defer that task", () => withDataDir((dataDir) => {
+  const output = runHook(dataDir, promptInput("command-text", "!model-watch on，整理这段文案"));
+  assert.equal(loadTaskState("command-text", dataDir).enabled, true);
+  assert.match(output.hookSpecificOutput.additionalContext, /本轮只处理控制命令，不执行该正文/);
+  assert.match(output.hookSpecificOutput.additionalContext, /下一条消息重新发送主任务/);
+}));
+
 test("matching route ticket skips repeat evaluation and records actual model", () => withDataDir((dataDir) => {
   const prompt = "请继续修改登录方案";
   const task = loadTaskState("route-task", dataDir);
@@ -122,6 +138,38 @@ test("a different request supersedes the pending recommendation", () => withData
   const after = loadTaskState("superseded-task", dataDir);
   assert.equal(after.observationHistory.at(-1).result, "superseded");
   assert.equal(after.routeTicket, null);
+}));
+
+test("turning monitoring off records a cancelled pending recommendation", () => withDataDir((dataDir) => {
+  const task = loadTaskState("cancelled-task", dataDir);
+  task.enabled = true;
+  task.routeTicket = createRouteTicket({
+    turnId: "old-turn",
+    promptHash: hashPrompt("原请求"),
+    originalModel: "gpt-5.6-terra"
+  }, "gpt-5.6-sol", Date.now(), "assessment-cancelled");
+  saveTaskState("cancelled-task", task, dataDir);
+  runHook(dataDir, promptInput("cancelled-task", "!model-watch off", "gpt-5.6-terra"));
+  const after = loadTaskState("cancelled-task", dataDir);
+  assert.equal(after.routeTicket, null);
+  assert.equal(after.observationHistory.at(-1).result, "cancelled");
+  assert.equal(after.observationHistory.at(-1).assessmentId, "assessment-cancelled");
+}));
+
+test("an expired recommendation is observed instead of silently disappearing", () => withDataDir((dataDir) => {
+  const task = loadTaskState("expired-task", dataDir);
+  task.enabled = true;
+  task.routeTicket = createRouteTicket({
+    turnId: "old-turn",
+    promptHash: hashPrompt("原请求"),
+    originalModel: "gpt-5.6-terra"
+  }, "gpt-5.6-sol", 0, "assessment-expired");
+  saveTaskState("expired-task", task, dataDir);
+  runHook(dataDir, promptInput("expired-task", "原请求", "gpt-5.6-sol"));
+  const after = loadTaskState("expired-task", dataDir);
+  assert.equal(after.routeTicket, null);
+  assert.equal(after.observationHistory.at(-1).result, "expired");
+  assert.equal(after.observationHistory.at(-1).assessmentId, "assessment-expired");
 }));
 
 test("removed command is handled without running the recommendation engine", () => withDataDir((dataDir) => {

@@ -80,6 +80,7 @@ test("single-path workflow enables, assesses, interrupts and resumes the same re
       name: "model_watch_record_assessment",
       arguments: {
         sessionId,
+        turnId: loadTaskState(sessionId, dataDir).activeRequest.turnId,
         status: "change",
         recommendedModel: "gpt-5.6-sol",
         rationale: "本轮需要整合高风险跨系统约束",
@@ -89,6 +90,9 @@ test("single-path workflow enables, assesses, interrupts and resumes the same re
     assert.equal(recorded.result.structuredContent.routeTicketCreated, true);
     assert.equal(loadTaskState(sessionId, dataDir).lastAssessment.status, "change");
     assert.equal(loadTaskState(sessionId, dataDir).lastAssessment.evaluator, "same-session");
+    assert.equal(loadTaskState(sessionId, dataDir).assessmentHistory.length, 1);
+    assert.equal(loadTaskState(sessionId, dataDir).assessmentHistory[0].promptHash.length, 64);
+    assert.equal(JSON.stringify(loadTaskState(sessionId, dataDir).assessmentHistory).includes(prompt), false);
 
     const resumed = runHook(dataDir, sessionId, prompt, "gpt-5.6-sol");
     assert.match(resumed.hookSpecificOutput.additionalContext, /MODEL_WATCH_ROUTE/);
@@ -96,12 +100,14 @@ test("single-path workflow enables, assesses, interrupts and resumes the same re
     const finalState = loadTaskState(sessionId, dataDir);
     assert.equal(finalState.routeTicket, null);
     assert.equal(finalState.observationHistory.at(-1).result, "adopted");
+    assert.equal(finalState.observationHistory.at(-1).assessmentId, finalState.assessmentHistory[0].assessmentId);
 
     runHook(dataDir, sessionId, "同模型建议校验", "gpt-5.6-luna");
     const invalid = await client.request("tools/call", {
       name: "model_watch_record_assessment",
       arguments: {
         sessionId,
+        turnId: loadTaskState(sessionId, dataDir).activeRequest.turnId,
         status: "change",
         recommendedModel: "gpt-5.6-luna",
         rationale: "不应推荐当前模型",
@@ -111,6 +117,60 @@ test("single-path workflow enables, assesses, interrupts and resumes the same re
     assert.equal(invalid.result.structuredContent.routeTicketCreated, false);
     assert.equal(invalid.result.structuredContent.invalidChange, true);
     assert.equal(loadTaskState(sessionId, dataDir).lastAssessment.status, "failed");
+  } finally {
+    client.child.kill();
+    rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("a late assessment cannot overwrite a newer request", async () => {
+  const dataDir = mkdtempSync(join(tmpdir(), "model-watch-stale-turn-"));
+  const sessionId = "stale-turn-task";
+  const client = createMcpClient(dataDir);
+  try {
+    runHook(dataDir, sessionId, "!model-watch on");
+    const firstTurn = runHook(dataDir, sessionId, "第一条请求");
+    const firstTurnId = loadTaskState(sessionId, dataDir).activeRequest.turnId;
+    assert.match(firstTurn.hookSpecificOutput.additionalContext, /turn_id:/);
+    runHook(dataDir, sessionId, "第二条请求");
+    const late = await client.request("tools/call", {
+      name: "model_watch_record_assessment",
+      arguments: {
+        sessionId,
+        turnId: firstTurnId,
+        status: "change",
+        recommendedModel: "gpt-5.6-sol",
+        rationale: "迟到结果不应写入新请求"
+      }
+    });
+    assert.equal(late.result.structuredContent, undefined);
+    assert.match(late.result.content[0].text, /与当前请求不匹配/);
+    assert.equal(loadTaskState(sessionId, dataDir).assessmentHistory.length, 0);
+  } finally {
+    client.child.kill();
+    rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("a change from check does not create a resumable task ticket", async () => {
+  const dataDir = mkdtempSync(join(tmpdir(), "model-watch-check-only-"));
+  const sessionId = "check-only-task";
+  const client = createMcpClient(dataDir);
+  try {
+    runHook(dataDir, sessionId, "!model-watch on");
+    runHook(dataDir, sessionId, "!model-watch check");
+    const recorded = await client.request("tools/call", {
+      name: "model_watch_record_assessment",
+      arguments: {
+        sessionId,
+        turnId: loadTaskState(sessionId, dataDir).activeRequest.turnId,
+        status: "change",
+        recommendedModel: "gpt-5.6-sol",
+        rationale: "只检查命令没有待执行主任务"
+      }
+    });
+    assert.equal(recorded.result.structuredContent.routeTicketCreated, false);
+    assert.equal(loadTaskState(sessionId, dataDir).routeTicket, null);
   } finally {
     client.child.kill();
     rmSync(dataDir, { recursive: true, force: true });

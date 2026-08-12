@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { modelIdsEqual, normalizeModelId } from "./models.mjs";
 
 export const ENGINE_VERSION = "2.0.0";
 
@@ -16,11 +17,24 @@ export function normalizeEngineResult(value, availableModels = [], currentModel 
     ? parsed.recommendedModel.trim()
     : null;
   if (parsed.status === "change") {
-    if (!recommendedModel || (availableModels.length && !availableModels.includes(recommendedModel))) {
+    const matchedCandidate = availableModels.find((candidate) => modelIdsEqual(candidate, recommendedModel));
+    if (!recommendedModel || (availableModels.length && !matchedCandidate)) {
       return failedResult("评估器返回了不可用模型");
     }
     if (!currentModel) return failedResult("当前模型身份未知，不能形成有效切换建议");
-    if (recommendedModel === currentModel) return failedResult("推荐模型与当前模型相同，无法形成有效切换建议");
+    if (modelIdsEqual(matchedCandidate || recommendedModel, currentModel)) {
+      return failedResult("推荐模型与当前模型相同，无法形成有效切换建议");
+    }
+    return {
+      status: parsed.status,
+      recommendedModel: matchedCandidate || recommendedModel,
+      rationale: typeof parsed.rationale === "string" && parsed.rationale.trim()
+        ? parsed.rationale.trim().slice(0, 600)
+        : "当前信息不足以形成可靠的切换建议",
+      evaluator: typeof parsed.evaluator === "string" ? parsed.evaluator.slice(0, 80) : "unknown",
+      engineVersion: ENGINE_VERSION,
+      createdAt: new Date().toISOString()
+    };
   }
   return {
     status: parsed.status,

@@ -1,6 +1,6 @@
 ---
 name: model-watch
-description: 在 Codex 连续对话或任务中，于主任务执行前判断当前模型是否仍合适；处理 $model-watch 启用、暂停、设置、检查、同一请求恢复与模型建议。用户显式调用 $model-watch，或 Hook 注入 MODEL_WATCH_CONTEXT / MODEL_WATCH_ROUTE 时使用。
+description: 在 Codex 连续对话或任务中，通过 !model-watch 按需启用当前任务；由当前主模型完成同会话判断，在需要切换时暂停主任务并给出模型建议。用户显式调用 !model-watch 或 Hook 注入 MODEL_WATCH_CONTEXT / MODEL_WATCH_ROUTE 时使用。
 ---
 
 # 模型哨兵
@@ -72,7 +72,7 @@ engine_version: 2.0.0
 
 ## 同一请求恢复
 
-收到 `[MODEL_WATCH_ROUTE 2.0.0]` 时，说明同一请求已经完成判断。直接完整执行当前原始用户请求，不再重复判断。
+收到 `[MODEL_WATCH_ROUTE 2.0.0]` 时，说明同一请求已经完成判断。除 `check` 外，直接完整执行当前原始用户请求，不再重复判断。`check` 没有待执行主任务：只说明检查已完成，并提示用户按当前模型发送下一条真实任务。
 
 插件只保存请求 SHA-256 和模型元数据，不保存、改写或重放任务正文。
 
@@ -88,6 +88,8 @@ engine_version: 2.0.0
 - `!model-watch check-inline（检查并执行），<主任务>`：`stay` 执行主任务，`change` 只显示建议。
 
 `$model-watch` 保留为兼容别名，但它可能触发宿主的插件选择菜单；按需启用请优先使用 `!model-watch`。
+
+控制命令必须单独发送。若 `on`、`off`、`pause`、`resume`、`status` 或 `settings` 后还附有任务正文，本轮只处理命令，并明确要求用户在下一条消息重新发送正文；不得静默丢弃或执行该正文。暂停状态下，`check-inline` 不做判断，直接执行逗号后的主任务。
 
 ## 状态标识
 

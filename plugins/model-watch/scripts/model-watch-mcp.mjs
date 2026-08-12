@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,6 +7,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { ENGINE_VERSION, failedResult, normalizeEngineResult } from "../src/engine.mjs";
+import { availableModelsFromEnv } from "../src/models.mjs";
 import {
   createRouteTicket,
   getEffectiveConfig,
@@ -17,19 +19,11 @@ import {
   updateGlobalConfig
 } from "../src/state.mjs";
 
-const SERVER_VERSION = "1.1.0";
+const SERVER_VERSION = "1.1.1";
 const UI_URI = "ui://model-watch/settings-v5.html";
 const UI_MIME = "text/html;profile=mcp-app";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const DATA_DIR = resolveDataDir();
-const DEFAULT_MODELS = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"];
-
-function availableModels() {
-  const configured = String(process.env.MODEL_WATCH_AVAILABLE_MODELS || "")
-    .split(",").map((model) => model.trim()).filter(Boolean);
-  return configured.length ? [...new Set(configured)] : DEFAULT_MODELS;
-}
-
+const DATA_DIR = resolveDataDir(process.env, ROOT);
 function statusPayload(sessionId) {
   const id = typeof sessionId === "string" && sessionId.trim() && sessionId !== "unknown"
     ? sessionId.trim()
@@ -37,7 +31,7 @@ function statusPayload(sessionId) {
   return {
     sessionId: id,
     engineVersion: ENGINE_VERSION,
-    availableModels: availableModels(),
+    availableModels: availableModelsFromEnv(),
     global: loadGlobalConfig(DATA_DIR),
     task: id ? loadTaskState(id, DATA_DIR) : null,
     effective: id ? getEffectiveConfig(id, DATA_DIR) : loadGlobalConfig(DATA_DIR)
@@ -76,19 +70,28 @@ function updateSettings(args) {
 function recordAssessment(args) {
   let result;
   const task = mutateTaskState(args.sessionId, (draft) => {
+    if (!draft.activeRequest?.turnId || draft.activeRequest.turnId === "unknown" || draft.activeRequest.turnId !== args.turnId) {
+      throw new Error("评估结果与当前请求不匹配，已安全放行；请让当前请求重新评估。");
+    }
     result = normalizeEngineResult({
       status: args.status,
       recommendedModel: args.recommendedModel,
       rationale: args.rationale,
       evaluator: "same-session"
-    }, availableModels(), draft.activeRequest?.originalModel || draft.currentModel);
+    }, availableModelsFromEnv(), draft.activeRequest?.originalModel || draft.currentModel);
     if (args.status === "change" && !draft.activeRequest?.originalModel) {
       result = failedResult("当前模型身份未知，不能形成有效切换建议");
     }
     result.evaluator = "same-session";
+    result.assessmentId = randomUUID();
+    result.turnId = draft.activeRequest.turnId;
+    result.promptHash = draft.activeRequest.promptHash;
+    result.originalModel = draft.activeRequest.originalModel;
+    result.availableModels = availableModelsFromEnv();
     draft.lastAssessment = result;
-    draft.routeTicket = result.status === "change"
-      ? createRouteTicket(draft.activeRequest, result.recommendedModel)
+    draft.assessmentHistory = [...(draft.assessmentHistory || []), result].slice(-12);
+    draft.routeTicket = result.status === "change" && draft.activeRequest?.commandAction !== "check"
+      ? createRouteTicket(draft.activeRequest, result.recommendedModel, Date.now(), result.assessmentId)
       : null;
     return draft;
   }, DATA_DIR);
@@ -142,6 +145,7 @@ server.registerTool("model_watch_record_assessment", {
   description: "保存当前主模型的同会话推荐判断；change 会生成不含正文的短期请求恢复状态。",
   inputSchema: {
     sessionId: z.string(),
+    turnId: z.string(),
     status: z.enum(["stay", "change", "uncertain", "failed"]),
     recommendedModel: z.string().nullable().optional(),
     rationale: z.string()

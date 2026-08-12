@@ -117,6 +117,7 @@ test("MCP server exposes settings UI and persists task configuration", async () 
     assert.match(resource.result.contents[0].text, /内部判断（不展示）/);
     assert.match(resource.result.contents[0].text, /启用后固定每轮评估/);
     assert.match(resource.result.contents[0].text, /id="taskStatusDot"/);
+    assert.match(resource.result.contents[0].text, /id="assessmentSummary"/);
     assert.match(resource.result.contents[0].text, /id="globalStatusIndicator"/);
     assert.match(resource.result.contents[0].text, /id="taskPaused"/);
     assert.doesNotMatch(resource.result.contents[0].text, /globalEvaluatorMode/);
