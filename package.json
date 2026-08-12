@@ -1,8 +1,8 @@
 {
   "name": "model-watch",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "private": false,
-  "description": "A Codex model and reasoning-effort recommendation assistant for long-running tasks.",
+  "description": "A pre-task model recommendation sentinel for Codex conversations and workflows.",
   "type": "module",
   "scripts": {
     "test": "node --test",
@@ -11,5 +11,9 @@
   "engines": {
     "node": ">=20"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.25.76"
+  }
 }

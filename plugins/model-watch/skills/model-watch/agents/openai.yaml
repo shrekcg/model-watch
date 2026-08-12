@@ -1,8 +1,8 @@
 interface:
   display_name: "模型哨兵"
-  short_description: "在合适时机建议下一轮模型与推理深度"
+  short_description: "在主任务前判断当前模型是否仍合适"
   brand_color: "#5168FF"
-  default_prompt: "使用 $model-watch 为当前任务启用模型与推理深度提醒。"
+  default_prompt: "!model-watch on"
 dependencies:
   tools:
     - type: "mcp"

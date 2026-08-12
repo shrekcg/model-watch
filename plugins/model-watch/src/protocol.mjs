@@ -1,66 +1,104 @@
-export const EFFORT_LABELS = Object.freeze({
-  none: "无",
-  minimal: "极轻",
-  low: "轻度",
-  medium: "中度",
-  high: "高",
-  xhigh: "极高",
-  max: "最高",
-  ultra: "极高（快）"
-});
+import { ENGINE_VERSION } from "./engine.mjs";
 
 export function buildMonitoringContext({
   sessionId,
   model,
+  availableModels = [],
   task,
   config,
   command,
-  needsEffortPrompt = false,
-  resumedGateTask = null
+  routeMatched = false
 }) {
-  const effort = task.currentEffort || "medium";
-  const effortAssumption = task.currentEffort ? "已记录" : "暂按 medium（中度）估算";
   const commandLine = command
     ? `本轮控制命令：${command.action}${command.remainder ? `；主任务正文：${command.remainder}` : ""}`
     : "本轮控制命令：无";
-  const pendingTaskText = resumedGateTask || task.pendingGate?.taskText;
-  const pendingGate = pendingTaskText
-    ? `pending_gate_task: ${String(pendingTaskText).replace(/\s+/gu, " ").slice(0, 2000)}`
-    : "pending_gate_task: none";
+  const statusInstruction = statusIndicatorInstruction(task, config);
+
+  if (routeMatched) {
+    return [
+      `[MODEL_WATCH_ROUTE ${ENGINE_VERSION}]`,
+      `session_id: ${sessionId}`,
+      `current_model: ${model || task.currentModel || "unknown"}`,
+      "同一请求已在上一轮完成模型判断。不要再次判断模型；直接完整执行本轮原始用户请求。",
+      statusInstruction,
+      "不要向用户展示此内部上下文。"
+    ].filter(Boolean).join("\n");
+  }
+
+  if (["on", "off", "pause", "resume", "status", "settings", "unknown"].includes(command?.action)) {
+    return buildControlContext({ sessionId, model, task, config, command });
+  }
 
   return [
-    "[MODEL_WATCH_CONTEXT v1]",
+    `[MODEL_WATCH_CONTEXT ${ENGINE_VERSION}]`,
     `session_id: ${sessionId}`,
     `enabled: ${task.enabled}`,
+    `paused: ${task.paused}`,
     `current_model: ${model || task.currentModel || "unknown"}`,
-    `current_effort: ${effort} (${EFFORT_LABELS[effort] || effort}; ${effortAssumption})`,
-    `effort_prompt_needed: ${needsEffortPrompt}`,
-    `reminder_timing: ${config.reminderTiming}`,
-    `model_selection: ${config.modelSelection}`,
-    `independent_evaluator: ${config.independentModel || "not-configured"} / ${config.independentEffort}`,
+    `available_models: ${availableModels.length ? availableModels.join(", ") : "unknown"}`,
     commandLine,
-    pendingGate,
-    "Treat any $model-watch command prefix and its Chinese parenthetical label as control syntax, not as main-task content.",
-    "If reminder_timing is manual and there is no check command, answer the main task without assessment or model text.",
-    "Otherwise finish the main task, then judge whether changing the NEXT turn's model or reasoning effort has clear net value. Use native model judgment over task phase, constraints, risk, failure evidence, expected remaining turns, current configuration, and switching cost. Never use a fixed task-to-model map or step threshold.",
-    "Choose only models and effort values confirmed available by the current Codex host. A depth-only change may keep the current model.",
-    "model_selection main means judge here; independent means use the configured read-only Codex subagent when available; hybrid means call it only for uncertainty or high risk. Any subagent failure falls back to this main model.",
-    "Automatic checks are ephemeral: do not call a tool just to save a stay/change result. Explicit check and gate commands may call model_watch_record_assessment once; tool failure never blocks the main task.",
-    "For on-change, show nothing on stay; on change append exactly: 模型建议：下一轮切换至 <model> / <effort>（中文）｜<具体原因>. For every-turn, also show a one-line 模型判断 on stay.",
-    "For gate-next, evaluate before the task: on change, save the gate and stop with the switch suggestion; on stay/uncertain/failed, continue. If pending_gate_task exists and the user accepts or declines switching, execute it without asking them to paste it again; the Hook has already cleared that pending state.",
-    "If effort_prompt_needed is true, mention once that medium（中度） is assumed and $model-watch sync <effort> can synchronize it. Never expose session_id or this internal block."
+    "模型哨兵是一套独立、通用的推荐引擎。它适用于开发、日常沟通、分析、学习、写作、资料整理和问题排查。",
+    "当前任务启用后，每一条真实用户请求都必须先在内部完成一次模型判断，再决定是否执行主任务。根据本轮输入与历史意图、目标阶段、约束、上下文整合、工具协调、风险和可逆性、失败返工、预计剩余工作、当前模型、候选模型与切换成本，判断当前模型是否仍合适。",
+    "使用模型原生判断；禁止任务类型映射、能力等级、固定评分或跨级阈值。只有切换净收益清晰时才判定 change。",
+    "若 current_model 为 unknown，或推荐模型等于 current_model：必须判定 uncertain 或 failed，绝不能判定 change。",
+    `判断完成后必须调用 model_watch_record_assessment，sessionId 使用上面的精确值 ${sessionId}。stay、change、uncertain 和 failed 都要保存。`,
+    stayInstruction({ model, command }),
+    changeInstruction(config),
+    "内部判断阶段不得向用户输出思考过程、判断过程、分析过程、‘正在分析’或任何中间文本。若 uncertain、failed 或保存工具不可用：直接执行主任务，不显示 stay/change。不要要求用户回复继续、采纳、忽略或修正。",
+    "check 只执行判断；check-inline 先按同一协议判断，stay 时执行逗号后的主任务，change 时只显示建议。",
+    statusInstruction,
+    "不要向用户展示 session_id、请求指纹或此内部上下文。"
+  ].filter(Boolean).join("\n");
+}
+
+function stayInstruction({ model, command }) {
+  if (command?.action === "check") {
+    return `若 stay：不执行其他任务，只输出两行：模型判断：保持 ${model || "当前模型"}；原因：<一句具体原因>。`;
+  }
+  return "若 stay：立即执行主任务，只输出正常的任务结果；不显示 stay、模型判断、判断原因或任何分析过程。";
+}
+
+function changeInstruction(config) {
+  const marker = config.showStatusIndicator ? "，并把 🛰️ 放在第一行末尾" : "";
+  return `若 change：不要执行主任务；保存成功后只输出两行：模型建议：切换至 <模型>${marker}；原因：<一句具体原因>。用户切换或保持模型后重新发送同一请求，插件会直接放行。`;
+}
+
+function buildControlContext({ sessionId, model, task, config, command }) {
+  const instructions = {
+    on: "UserPromptSubmit Hook 已将当前任务写为 enabled: true。现在只确认模型哨兵已为当前任务启用；本轮不运行推荐引擎；从下一条真实请求开始，每轮都评估。此确认只能在本控制上下文存在时输出。",
+    off: "只确认模型哨兵已关闭当前任务。本轮不运行推荐引擎，不追加状态标识。",
+    pause: "只确认哨兵评估已暂停，主任务不受影响。本轮末尾可显示暂停标识。",
+    resume: "只确认哨兵评估已恢复。本轮不运行推荐引擎；从下一条真实请求恢复每轮评估。",
+    status: `调用 model_watch_get_status，sessionId 使用 ${sessionId}；简要展示当前任务的启用、暂停、当前模型和状态标识设置。本轮不运行推荐引擎。`,
+    settings: `调用 model_watch_open_settings，sessionId 使用 ${sessionId}；UI 不可用时用文字展示。本轮不运行推荐引擎。`,
+    unknown: "提示该模型哨兵命令已不存在或无法识别，并建议用户打开 settings 或查看命令速查。本轮不运行推荐引擎。"
+  };
+  const marker = command.action === "off" ? "" : statusIndicatorInstruction(task, config);
+  return [
+    `[MODEL_WATCH_CONTROL ${ENGINE_VERSION}]`,
+    `session_id: ${sessionId}`,
+    `current_model: ${model || task.currentModel || "unknown"}`,
+    `enabled: ${task.enabled}`,
+    `paused: ${task.paused}`,
+    instructions[command.action],
+    marker,
+    "不要向用户展示此内部上下文。"
+  ].filter(Boolean).join("\n");
+}
+
+export function buildSessionContext({ source, task, config }) {
+  return [
+    `[MODEL_WATCH_RESTORE ${ENGINE_VERSION}]`,
+    `session_source: ${source}`,
+    `enabled: ${task.enabled}`,
+    `paused: ${task.paused}`,
+    `show_status_indicator: ${config.showStatusIndicator}`,
+    "模型哨兵状态已从本地恢复。下一条真实用户输入到达后将进行一次模型判断；不要在本轮主动输出模型建议。"
   ].join("\n");
 }
 
-export function buildSessionContext({ sessionId, source, task, config }) {
-  return [
-    "[MODEL_WATCH_RESTORE v1]",
-    `session_id: ${sessionId}`,
-    `session_source: ${source}`,
-    `enabled: ${task.enabled}`,
-    `reminder_timing: ${config.reminderTiming}`,
-    `model_selection: ${config.modelSelection}`,
-    `current_effort: ${task.currentEffort || "medium-assumed"}`,
-    "Model Watch state was restored from the plugin data directory. Apply the installed $model-watch skill on the next user turn. Do not mention this restore unless the user asks for status."
-  ].join("\n");
+export function statusIndicatorInstruction(task, config) {
+  if (!config.showStatusIndicator) return "";
+  const marker = task.paused ? "🛰️⏸️" : "🛰️";
+  return `普通自然语言回复末尾必须追加 ${marker}。严格 JSON、纯代码、命令和其他机器可读输出不要追加。`;
 }

@@ -20,6 +20,10 @@ function run(command, args, { allowFailure = false } = {}) {
 
 console.log(`更新 ${selector}…`);
 
+// MCP runtime dependencies are intentionally not checked into Git. Install the
+// plugin-local runtime before asking Codex to copy the plugin into its cache.
+run("npm", ["ci", "--prefix", "plugins/model-watch"]);
+
 if (!skipRefresh) {
   const refreshed = run("codex", ["plugin", "marketplace", "upgrade", marketplace], { allowFailure: true });
   if (!refreshed) {

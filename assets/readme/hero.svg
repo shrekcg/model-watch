@@ -1,60 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
   <title id="title">模型哨兵</title>
-  <desc id="desc">在合适时机提示用户切换 Codex 模型与推理深度，并展示从当前档位到推荐档位的判断路径。</desc>
-
+  <desc id="desc">真实请求进入当前对话模型后，先完成同会话判断；只在值得切换时暂停主任务并给出建议。</desc>
   <defs>
-    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#111A31"/>
-      <stop offset="1" stop-color="#0B1020"/>
-    </linearGradient>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-      <path d="M0,0 L10,5 L0,10 Z" fill="#5EEAD4"/>
-    </marker>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0B1020"/><stop offset="1" stop-color="#15233F"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#5EEAD4"/><stop offset="1" stop-color="#7C8CFF"/></linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#5EEAD4"/></marker>
   </defs>
-
-  <rect width="1200" height="380" rx="28" fill="#0B1020"/>
-  <rect x="24" y="24" width="1152" height="332" rx="22" fill="url(#panel)" stroke="#24304A"/>
-
-  <g transform="translate(70 62)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
-    <text x="0" y="18" font-size="16" font-weight="700" letter-spacing="2" fill="#5EEAD4">CODEX 模型选择辅助插件</text>
-    <text x="0" y="100" font-size="66" font-weight="760" fill="#F8FAFC">模型哨兵</text>
-    <text x="0" y="148" font-size="25" font-weight="500" fill="#CBD5E1">在合适时机，提示你切换模型与推理深度</text>
-    <text x="0" y="192" font-size="19" fill="#94A3B8">控制额外判断成本 · 保持主任务连续 · 提高额度使用效率</text>
-
-    <g transform="translate(0 232)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
-      <rect width="178" height="38" rx="19" fill="#17213A" stroke="#334155"/>
-      <text x="89" y="25" text-anchor="middle" font-size="15" fill="#E2E8F0">模型与深度一起建议</text>
-      <rect x="192" width="194" height="38" rx="19" fill="#17213A" stroke="#334155"/>
-      <text x="289" y="25" text-anchor="middle" font-size="15" fill="#E2E8F0">全局与当前任务配置</text>
+  <rect width="1200" height="380" rx="28" fill="url(#bg)"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif">
+    <g transform="translate(64 58)">
+      <text y="18" font-size="15" font-weight="700" letter-spacing="2" fill="#5EEAD4">CODEX 模型路由建议</text>
+      <text y="105" font-size="68" font-weight="760" fill="#F8FAFC">模型哨兵</text>
+      <text y="153" font-size="25" fill="#CBD5E1">真实输入到达后，由当前模型先完成同会话判断</text>
+      <text y="197" font-size="18" fill="#94A3B8">模型原生判断 · 通用场景 · 失败放行 · 用户保留选择权</text>
+      <g transform="translate(0 232)">
+        <rect width="155" height="38" rx="19" fill="#17213A" stroke="#334155"/><text x="77" y="25" text-anchor="middle" font-size="14" fill="#E2E8F0">不做固定映射</text>
+        <rect x="169" width="168" height="38" rx="19" fill="#17213A" stroke="#334155"/><text x="253" y="25" text-anchor="middle" font-size="14" fill="#E2E8F0">不保存任务正文</text>
+      </g>
     </g>
-  </g>
-
-  <g transform="translate(720 58)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
-    <text x="0" y="20" font-size="15" font-weight="700" letter-spacing="1.5" fill="#94A3B8">一次判断，只给一条建议</text>
-
-    <g transform="translate(0 50)">
-      <rect width="178" height="112" rx="18" fill="#121C33" stroke="#334155"/>
-      <text x="20" y="30" font-size="15" fill="#94A3B8">当前档位</text>
-      <text x="20" y="65" font-size="22" font-weight="700" fill="#F8FAFC">Terra</text>
-      <text x="20" y="91" font-size="16" fill="#CBD5E1">medium（中度）</text>
-    </g>
-
-    <path d="M190 106 C238 106, 238 106, 280 106" fill="none" stroke="#5EEAD4" stroke-width="3" marker-end="url(#arrow)"/>
-    <circle cx="234" cy="106" r="18" fill="#0B1020" stroke="#5EEAD4" stroke-width="2"/>
-    <path d="M226 106 L232 112 L243 99" fill="none" stroke="#5EEAD4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-
-    <g transform="translate(292 50)">
-      <rect width="178" height="112" rx="18" fill="#10272A" stroke="#5EEAD4"/>
-      <text x="20" y="30" font-size="15" fill="#99F6E4">下一轮建议</text>
-      <text x="20" y="65" font-size="22" font-weight="700" fill="#F8FAFC">Sol</text>
-      <text x="20" y="91" font-size="16" fill="#CCFBF1">high（高）</text>
-    </g>
-
-    <g transform="translate(0 190)">
-      <rect width="470" height="82" rx="16" fill="#0E1629" stroke="#24304A"/>
-      <rect x="18" y="18" width="8" height="46" rx="4" fill="#FBBF24"/>
-      <text x="44" y="35" font-size="15" font-weight="700" fill="#FBBF24">模型建议</text>
-      <text x="44" y="59" font-size="16" fill="#E2E8F0">任务已进入跨系统、高影响的设计阶段</text>
+    <g transform="translate(724 58)">
+      <rect width="412" height="264" rx="24" fill="#101A30" stroke="#334155"/>
+      <text x="28" y="42" font-size="14" font-weight="700" letter-spacing="1" fill="#94A3B8">本轮前置判断</text>
+      <g transform="translate(28 70)">
+        <rect width="124" height="74" rx="16" fill="#17213A" stroke="#334155"/><text x="62" y="31" text-anchor="middle" font-size="13" fill="#94A3B8">当前模型</text><text x="62" y="55" text-anchor="middle" font-size="20" font-weight="700" fill="#F8FAFC">Terra</text>
+        <path d="M140 37H200" stroke="#5EEAD4" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <rect x="216" width="140" height="74" rx="16" fill="#10272A" stroke="#5EEAD4"/><text x="286" y="31" text-anchor="middle" font-size="13" fill="#99F6E4">建议模型</text><text x="286" y="55" text-anchor="middle" font-size="20" font-weight="700" fill="#F8FAFC">Sol</text>
+      </g>
+      <rect x="28" y="170" width="356" height="66" rx="14" fill="#0D1426" stroke="#24304A"/>
+      <rect x="46" y="186" width="6" height="34" rx="3" fill="url(#accent)"/>
+      <text x="68" y="198" font-size="14" font-weight="700" fill="#5EEAD4">模型建议：切换至 GPT-5.6 Sol</text>
+      <text x="68" y="221" font-size="13" fill="#CBD5E1">原因：本轮进入跨系统、高风险设计。</text>
     </g>
   </g>
 </svg>

@@ -5,73 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>模型哨兵设置</title>
   <style>
-    :root {
-      color-scheme: light dark;
-      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-      --accent: #5168ff;
-      --accent-soft: color-mix(in srgb, #5168ff 15%, transparent);
-      --ink-muted: color-mix(in srgb, CanvasText 62%, transparent);
-      --line: color-mix(in srgb, CanvasText 11%, transparent);
-      --panel: color-mix(in srgb, CanvasText 4%, transparent);
-    }
-
-    * { box-sizing: border-box; }
-    body { margin: 0; background: transparent; color: CanvasText; }
-    button, select, option { font: inherit; }
-    .card { max-width: 760px; padding: 17px 19px; border: 1px solid color-mix(in srgb, CanvasText 14%, transparent); border-radius: 18px; background: Canvas; }
-    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-    h1 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
-    .subtitle { max-width: 520px; margin: 4px 0 0; color: var(--ink-muted); font-size: 12px; line-height: 1.45; }
-    .status-dot { width: 8px; height: 8px; margin-top: 6px; flex: 0 0 auto; border-radius: 999px; background: #37b878; box-shadow: 0 0 0 4px color-mix(in srgb, #37b878 14%, transparent); }
-    .tabs { display: flex; gap: 5px; padding: 3px; margin-bottom: 14px; border-radius: 10px; background: var(--panel); }
-    .tab { flex: 1; border: 0; border-radius: 8px; padding: 7px 10px; background: transparent; color: var(--ink-muted); font-size: 12px; cursor: pointer; }
-    .tab:hover { color: CanvasText; }
-    .tab.active { background: Canvas; color: CanvasText; box-shadow: 0 1px 4px color-mix(in srgb, CanvasText 12%, transparent); }
-    .section { display: none; }
-    .section.active { display: block; }
-    .settings-block + .settings-block { padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--line); }
-    .block-heading { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
-    .block-heading h2 { margin: 0; font-size: 14px; letter-spacing: -.01em; }
-    .eyebrow { color: var(--accent); font-size: 10px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
-    .block-description { margin: 0 0 8px; color: var(--ink-muted); font-size: 11px; line-height: 1.45; }
-    .form { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-    .row { display: grid; grid-template-columns: minmax(155px, .85fr) minmax(200px, 1.15fr); gap: 13px; align-items: center; padding: 9px 12px; border-bottom: 1px solid var(--line); }
-    .row:last-child { border-bottom: 0; }
-    .row.is-hidden { display: none; }
-    label strong { display: block; font-size: 12px; font-weight: 650; line-height: 1.3; }
-    label span { display: block; margin-top: 3px; color: var(--ink-muted); font-size: 10.5px; line-height: 1.35; }
-    select { width: 100%; min-height: 32px; padding: 6px 9px; border: 1px solid color-mix(in srgb, CanvasText 19%, transparent); border-radius: 8px; background: Canvas; color: inherit; font-size: 12px; line-height: 1.25; }
-    select:focus-visible, button:focus-visible, input:focus-visible ~ .switch-icon { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .switch-wrap { display: flex; justify-content: flex-end; align-items: center; }
-    /* Lucide toggle geometry, rendered as a fixed SVG to avoid sub-pixel pseudo-element drift. */
-    .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex: 0 0 44px; contain: layout paint; }
-    .switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-    .switch-icon { position: absolute; inset: 0; display: block; width: 44px; height: 24px; overflow: visible; cursor: pointer; }
-    .switch-icon rect { fill: color-mix(in srgb, CanvasText 16%, transparent); stroke: color-mix(in srgb, CanvasText 22%, transparent); stroke-width: 1; }
-    .switch-icon circle { fill: Canvas; stroke: color-mix(in srgb, #000 30%, transparent); stroke-width: 1; }
-    .switch-icon--on { display: none; }
-    .switch input:checked ~ .switch-icon--off { display: none; }
-    .switch input:checked ~ .switch-icon--on { display: block; }
-    .switch-icon--on rect { fill: var(--accent); stroke: var(--accent); }
-    .conditional { border: 1px dashed color-mix(in srgb, var(--accent) 34%, transparent); border-radius: 10px; margin-top: 8px; padding: 2px; background: color-mix(in srgb, var(--accent) 4%, transparent); }
-    .conditional .row { border-bottom-color: color-mix(in srgb, var(--accent) 14%, transparent); }
-    .conditional-note { padding: 7px 10px 3px; color: var(--ink-muted); font-size: 10.5px; line-height: 1.4; }
-    .actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 14px; }
-    .save { border: 0; border-radius: 9px; padding: 8px 16px; background: var(--accent); color: white; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 24%, transparent); }
-    .save:hover { filter: brightness(1.08); }
-    .status { min-height: 16px; color: var(--ink-muted); font-size: 11px; }
-    pre { margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: CanvasText; font-size: 11px; line-height: 1.7; white-space: pre-wrap; }
-    .command-note { margin: 8px 0 0; color: var(--ink-muted); font-size: 11px; line-height: 1.45; }
-    @media (max-width: 560px) {
-      .card { padding: 15px; }
-      .header { margin-bottom: 14px; }
-      .row { grid-template-columns: 1fr; gap: 9px; }
-      .switch-wrap { justify-content: flex-start; }
-      .actions { justify-content: space-between; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .switch-track, .switch-track::after { transition: none; }
-    }
+    :root { color-scheme:light dark; font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; --accent:#5168ff; --ok:#37b878; --pause:#e39a35; --muted:color-mix(in srgb,CanvasText 62%,transparent); --line:color-mix(in srgb,CanvasText 12%,transparent); --panel:color-mix(in srgb,CanvasText 4%,transparent); }
+    * { box-sizing:border-box; }
+    body { margin:0; background:transparent; color:CanvasText; }
+    button,select { font:inherit; }
+    .card { max-width:720px; padding:18px 20px; border:1px solid color-mix(in srgb,CanvasText 14%,transparent); border-radius:18px; background:Canvas; }
+    .header { display:flex; justify-content:space-between; gap:16px; margin-bottom:15px; }
+    h1 { margin:0; font-size:20px; letter-spacing:-.02em; }
+    .subtitle,.hint,.block-description,.command-note,.flow { font-size:11px; line-height:1.5; }
+    .subtitle,.block-description,.command-note { color:var(--muted); }
+    .subtitle { margin:4px 0 0; }
+    .hint { margin:4px 0 0; color:color-mix(in srgb,var(--accent) 78%,CanvasText); }
+    .live-status { display:flex; align-items:center; gap:7px; height:24px; color:var(--muted); font-size:10.5px; white-space:nowrap; }
+    .status-dot { width:8px; height:8px; border-radius:50%; background:color-mix(in srgb,CanvasText 28%,transparent); box-shadow:0 0 0 4px color-mix(in srgb,CanvasText 7%,transparent); }
+    .status-dot.enabled { background:var(--ok); box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 14%,transparent); }
+    .status-dot.paused { background:var(--pause); box-shadow:0 0 0 4px color-mix(in srgb,var(--pause) 14%,transparent); }
+    .tabs { display:flex; gap:5px; padding:3px; margin-bottom:13px; border-radius:10px; background:var(--panel); }
+    .tab { flex:1; padding:7px 10px; border:0; border-radius:8px; background:transparent; color:var(--muted); font-size:12px; cursor:pointer; }
+    .tab.active { background:Canvas; color:CanvasText; box-shadow:0 1px 4px color-mix(in srgb,CanvasText 12%,transparent); }
+    .section { display:none; }
+    .section.active { display:block; }
+    .flow { margin:0 0 15px; padding:10px 12px; border:1px solid color-mix(in srgb,var(--accent) 24%,transparent); border-radius:11px; background:color-mix(in srgb,var(--accent) 5%,transparent); }
+    .flow strong { color:color-mix(in srgb,var(--accent) 80%,CanvasText); }
+    .settings-block + .settings-block { padding-top:15px; margin-top:15px; border-top:1px solid var(--line); }
+    .block-heading { display:flex; align-items:baseline; gap:8px; margin-bottom:4px; }
+    .block-heading h2 { margin:0; font-size:14px; }
+    .eyebrow { color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.1em; }
+    .block-description { margin:0 0 8px; }
+    .form { overflow:hidden; border:1px solid var(--line); border-radius:12px; }
+    .row { display:grid; grid-template-columns:minmax(180px,.9fr) minmax(220px,1.1fr); gap:13px; align-items:center; min-height:58px; padding:8px 12px; border-bottom:1px solid var(--line); }
+    .row:last-child { border-bottom:0; }
+    label strong { display:block; font-size:12px; font-weight:680; line-height:1.3; }
+    label span { display:block; margin-top:3px; color:var(--muted); font-size:10.5px; line-height:1.35; }
+    select { width:100%; min-height:32px; padding:6px 9px; border:1px solid color-mix(in srgb,CanvasText 19%,transparent); border-radius:8px; background:Canvas; color:inherit; font-size:12px; }
+    select:focus-visible,button:focus-visible,.switch input:focus-visible ~ svg { outline:2px solid var(--accent); outline-offset:2px; }
+    .switch-wrap { display:flex; justify-content:flex-end; align-items:center; }
+    .switch { position:relative; display:block; width:44px; height:24px; flex:0 0 44px; }
+    .switch input { position:absolute; width:1px; height:1px; opacity:0; }
+    .switch svg { position:absolute; inset:0; width:44px; height:24px; cursor:pointer; }
+    .switch rect { fill:color-mix(in srgb,CanvasText 16%,transparent); stroke:color-mix(in srgb,CanvasText 22%,transparent); }
+    .switch circle { fill:Canvas; stroke:color-mix(in srgb,#000 30%,transparent); }
+    .switch .on { display:none; }
+    .switch input:checked ~ .off { display:none; }
+    .switch input:checked ~ .on { display:block; }
+    .switch .on rect { fill:var(--accent); stroke:var(--accent); }
+    .conditional { margin-top:8px; padding:2px; border:1px dashed color-mix(in srgb,var(--accent) 34%,transparent); border-radius:10px; background:color-mix(in srgb,var(--accent) 4%,transparent); }
+    .conditional[hidden] { display:none; }
+    .conditional-note { padding:7px 10px 4px; color:var(--muted); font-size:10.5px; line-height:1.4; }
+    .actions { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:13px; }
+    .save { padding:8px 16px; border:0; border-radius:9px; background:var(--accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer; }
+    .status { min-height:16px; color:var(--muted); font-size:11px; }
+    pre { margin:0; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--panel); font-size:11px; line-height:1.8; white-space:pre-wrap; }
+    .command-note { margin:8px 0 0; }
+    @media(max-width:580px){ .card{padding:15px}.row{grid-template-columns:1fr;gap:8px}.switch-wrap{justify-content:flex-start}.actions{justify-content:space-between}.live-status span:last-child{display:none} }
   </style>
 </head>
 <body>
@@ -79,9 +65,10 @@
     <header class="header">
       <div>
         <h1>模型哨兵</h1>
-        <p class="subtitle">设置保存在本地。全局默认服务于新任务，当前任务可以跟随全局，也可以单独覆盖。</p>
+        <p class="subtitle">每个真实请求先在内部判断；保持当前模型时直接交付任务结果，仅建议切换时才提示。</p>
+        <p class="hint">按需启用：在要监测的对话中发送 !model-watch on；不启用的任务不会评估。</p>
       </div>
-      <span class="status-dot" aria-label="本地设置"></span>
+      <div class="live-status"><span class="status-dot" id="taskStatusDot"></span><span id="taskStatusText">当前任务未启用</span></div>
     </header>
 
     <nav class="tabs" aria-label="设置导航">
@@ -90,287 +77,62 @@
     </nav>
 
     <section class="section active" id="settings">
+      <p class="flow"><strong>固定工作流：</strong>真实请求 → 内部判断（不展示）→ stay 直接交付 / change 暂停主任务并提示 → 切换或保持后重新发送同一请求。</p>
+
       <div class="settings-block">
         <div class="block-heading"><span class="eyebrow">01</span><h2>全局默认</h2></div>
-        <p class="block-description">新任务会从这里继承默认行为；当前任务选择“单独覆盖”后，可以使用自己的配置。</p>
+        <p class="block-description">新任务是否自动启用，以及是否显示运行标识。</p>
         <div class="form">
           <div class="row">
-            <label for="globalAutoEnable"><strong>新任务自动启用</strong><span>开启后，所有新任务默认启动模型哨兵。</span></label>
-            <div class="switch-wrap"><label class="switch" aria-label="新任务自动启用"><input id="globalAutoEnable" type="checkbox"><svg class="switch-icon switch-icon--off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"></rect><circle cx="12" cy="12" r="8"></circle></svg><svg class="switch-icon switch-icon--on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"></rect><circle cx="32" cy="12" r="8"></circle></svg></label></div>
+            <label for="globalAutoEnable"><strong>新任务自动启用</strong><span>开启后，新建任务从第一条请求开始评估。</span></label>
+            <div class="switch-wrap"><label class="switch" aria-label="新任务自动启用"><input id="globalAutoEnable" type="checkbox"><svg class="off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="12" cy="12" r="8"/></svg><svg class="on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="32" cy="12" r="8"/></svg></label></div>
           </div>
           <div class="row">
-            <label for="globalReminderTiming"><strong>提醒时机</strong><span>决定自动判断何时显示模型建议。</span></label>
-            <select id="globalReminderTiming">
-              <option value="on-change">仅需要切换时提醒</option>
-              <option value="every-turn">每轮显示判断结果</option>
-              <option value="manual">手动检查</option>
-            </select>
-          </div>
-          <div class="row">
-            <label for="globalModelSelection"><strong>模型选择</strong><span>决定由哪个模型完成判断。</span></label>
-            <select id="globalModelSelection">
-              <option value="main">跟随主模型</option>
-              <option value="independent">独立评估</option>
-              <option value="hybrid">智能复核</option>
-            </select>
-          </div>
-        </div>
-        <div class="conditional" id="globalEvaluatorBlock" hidden>
-          <div class="conditional-note">当前判断方式需要单独指定评估模型与推理深度。</div>
-          <div class="row">
-            <label for="globalEvaluator"><strong>独立判断模型与深度</strong><span>用于独立评估，或在智能复核触发时使用。</span></label>
-            <select id="globalEvaluator" aria-label="全局独立判断模型与深度"></select>
+            <label for="globalStatusIndicator"><strong>显示运行标识</strong><span>普通回复末尾显示 🛰️；暂停时显示 🛰️⏸️。</span></label>
+            <div class="switch-wrap"><label class="switch" aria-label="显示运行标识"><input id="globalStatusIndicator" type="checkbox"><svg class="off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="12" cy="12" r="8"/></svg><svg class="on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="32" cy="12" r="8"/></svg></label></div>
           </div>
         </div>
       </div>
 
       <div class="settings-block">
         <div class="block-heading"><span class="eyebrow">02</span><h2>当前任务</h2></div>
-        <p class="block-description">只影响当前对话。首次无法从宿主识别推理深度时，模型哨兵会使用这里的选择作为判断基准。</p>
+        <p class="block-description">只影响当前对话；启用后固定每轮评估，不再配置 stay 或评估器模式。</p>
         <div class="form">
-          <div class="row">
-            <label for="taskEnabled"><strong>当前任务启用</strong><span>关闭后暂停当前任务的自动监控；全局不受影响。</span></label>
-            <div class="switch-wrap"><label class="switch" aria-label="当前任务启用"><input id="taskEnabled" type="checkbox"><svg class="switch-icon switch-icon--off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"></rect><circle cx="12" cy="12" r="8"></circle></svg><svg class="switch-icon switch-icon--on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"></rect><circle cx="32" cy="12" r="8"></circle></svg></label></div>
-          </div>
-          <div class="row">
-            <label for="taskCurrentEffort"><strong>当前推理深度</strong><span>用于首次判断推理深度；首次无法识别时，用于手动判断推理深度。</span></label>
-            <select id="taskCurrentEffort">
-              <option value="none">none（无）</option>
-              <option value="minimal">minimal（极轻）</option>
-              <option value="low">low（轻度）</option>
-              <option value="medium" selected>medium（中度）</option>
-              <option value="high">high（高）</option>
-              <option value="xhigh">xhigh（极高）</option>
-              <option value="max">max（最高）</option>
-              <option value="ultra">ultra（极高·快）</option>
-            </select>
-          </div>
-          <div class="row">
-            <label for="taskConfigMode"><strong>任务配置</strong><span>选择当前任务跟随全局，或建立单独配置。</span></label>
-            <select id="taskConfigMode">
-              <option value="inherit">跟随全局</option>
-              <option value="custom">单独覆盖</option>
-            </select>
-          </div>
+          <div class="row"><label for="taskEnabled"><strong>当前任务启用</strong><span>关闭后停止当前任务的哨兵功能；全局不受影响。</span></label><div class="switch-wrap"><label class="switch" aria-label="当前任务启用"><input id="taskEnabled" type="checkbox"><svg class="off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="12" cy="12" r="8"/></svg><svg class="on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="32" cy="12" r="8"/></svg></label></div></div>
+          <div class="row"><label for="taskPaused"><strong>暂停哨兵评估</strong><span>暂停期间不判断模型，主任务正常执行。</span></label><div class="switch-wrap"><label class="switch" aria-label="暂停哨兵评估"><input id="taskPaused" type="checkbox"><svg class="off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="12" cy="12" r="8"/></svg><svg class="on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="32" cy="12" r="8"/></svg></label></div></div>
+          <div class="row"><label for="taskConfigMode"><strong>运行标识</strong><span>跟随全局，或单独设置当前任务是否显示。</span></label><select id="taskConfigMode"><option value="inherit">跟随全局</option><option value="custom">当前任务单独设置</option></select></div>
         </div>
-        <div class="conditional" id="taskOverrideBlock" hidden>
-          <div class="conditional-note">以下设置只对当前任务生效，不会修改全局默认。</div>
-          <div class="row">
-            <label for="taskReminderTiming"><strong>提醒时机</strong><span>当前任务自己的提醒节奏。</span></label>
-            <select id="taskReminderTiming">
-              <option value="on-change">仅需要切换时提醒</option>
-              <option value="every-turn">每轮显示判断结果</option>
-              <option value="manual">手动检查</option>
-            </select>
-          </div>
-          <div class="row">
-            <label for="taskModelSelection"><strong>模型选择</strong><span>当前任务自己的判断方式。</span></label>
-            <select id="taskModelSelection">
-              <option value="main">跟随主模型</option>
-              <option value="independent">独立评估</option>
-              <option value="hybrid">智能复核</option>
-            </select>
-          </div>
-          <div class="conditional" id="taskEvaluatorBlock" hidden>
-            <div class="row">
-              <label for="taskEvaluator"><strong>独立判断模型与深度</strong><span>当前任务使用的子 Agent 模型与推理深度。</span></label>
-              <select id="taskEvaluator" aria-label="当前任务独立判断模型与深度"></select>
-            </div>
-          </div>
+        <div class="conditional" id="taskOverride" hidden>
+          <div class="conditional-note">以下设置只对当前任务生效。</div>
+          <div class="row"><label for="taskStatusIndicator"><strong>显示运行标识</strong><span>开启显示 🛰️ / 🛰️⏸️。</span></label><div class="switch-wrap"><label class="switch" aria-label="当前任务显示运行标识"><input id="taskStatusIndicator" type="checkbox"><svg class="off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="12" cy="12" r="8"/></svg><svg class="on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="32" cy="12" r="8"/></svg></label></div></div>
         </div>
       </div>
-
-      <div class="actions">
-        <span class="status" id="saveStatus" aria-live="polite"></span>
-        <button class="save" id="saveSettings" type="button">保存设置</button>
-      </div>
+      <div class="actions"><span class="status" id="saveStatus" aria-live="polite"></span><button class="save" id="saveSettings" type="button">保存设置</button></div>
     </section>
 
     <section class="section" id="commands">
-      <pre>$model-watch                         启用当前任务
-$model-watch off（关闭当前任务）
-$model-watch status（查看状态）
-$model-watch settings（打开设置）
-$model-watch check（立即检查）
-$model-watch check-inline（并行检查），&lt;主任务&gt;
-$model-watch gate-next（强制预检），&lt;主任务&gt;
-$model-watch sync high（同步推理深度）</pre>
-      <p class="command-note">命令可以直接写在正常对话输入中。中文括号只是说明，也可以省略。</p>
+      <pre>!model-watch on                      启用当前任务
+!model-watch off（关闭当前任务）
+!model-watch pause（暂停哨兵评估）
+!model-watch resume（恢复哨兵评估）
+!model-watch status（查看状态）
+!model-watch settings（打开设置）
+!model-watch check（立即检查）
+!model-watch check-inline（检查并执行），&lt;主任务&gt;</pre>
+      <p class="command-note">普通真实请求的判断在内部完成：保持当前模型时只显示任务结果。出现切换建议时，切换或保持模型后重新发送同一请求；插件不会要求你输入“继续”或反馈选择。</p>
     </section>
   </main>
-
   <script>
-    let payload = null;
-    let nextRequestId = 1;
-    const pendingRequests = new Map();
-    const byId = (id) => document.getElementById(id);
-    const MODEL_OPTIONS = [
-      ["gpt-5.6-luna", "GPT-5.6 Luna"],
-      ["gpt-5.6-terra", "GPT-5.6 Terra"],
-      ["gpt-5.6-sol", "GPT-5.6 Sol"]
-    ];
-    const EFFORT_OPTIONS = [
-      ["none", "无"],
-      ["minimal", "极轻"],
-      ["low", "轻度"],
-      ["medium", "中度"],
-      ["high", "高"],
-      ["xhigh", "极高"],
-      ["max", "最高"],
-      ["ultra", "极高·快"]
-    ];
-
-    function populateEvaluatorSelect(select, models = MODEL_OPTIONS) {
-      select.replaceChildren();
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "请选择模型与推理深度";
-      select.append(placeholder);
-      models.forEach((entry) => {
-        const [model, label] = Array.isArray(entry) ? entry : [entry, String(entry).replace(/^gpt-/i, "GPT-")];
-        const group = document.createElement("optgroup");
-        group.label = label;
-        EFFORT_OPTIONS.forEach(([effort, effortLabel]) => {
-          const option = document.createElement("option");
-          option.value = `${model}|${effort}`;
-          option.textContent = `${label} / ${effort}（${effortLabel}）`;
-          group.append(option);
-        });
-        select.append(group);
-      });
-    }
-
-    function evaluatorValue(model, effort) {
-      return model && effort ? `${model}|${effort}` : "";
-    }
-
-    function splitEvaluatorValue(value) {
-      const [model, effort] = String(value || "").split("|");
-      return { model: model || null, effort: effort || null };
-    }
-
-    function isSeparateEvaluator(selection) {
-      return selection === "independent" || selection === "hybrid";
-    }
-
-    function toggleVisibility() {
-      const globalSelection = byId("globalModelSelection").value;
-      const taskCustom = byId("taskConfigMode").value === "custom";
-      const taskSelection = byId("taskModelSelection").value;
-      byId("globalEvaluatorBlock").hidden = !isSeparateEvaluator(globalSelection);
-      byId("taskOverrideBlock").hidden = !taskCustom;
-      byId("taskEvaluatorBlock").hidden = !isSeparateEvaluator(taskSelection);
-    }
-
-    function render(next) {
-      payload = next?.structuredContent || next || payload;
-      if (!payload?.global) return;
-      if (Array.isArray(payload.availableModels) && payload.availableModels.length) {
-        const selectedGlobal = byId("globalEvaluator").value;
-        const selectedTask = byId("taskEvaluator").value;
-        const models = payload.availableModels.map((model) => [model, String(model).replace(/^gpt-/i, "GPT-")]);
-        populateEvaluatorSelect(byId("globalEvaluator"), models);
-        populateEvaluatorSelect(byId("taskEvaluator"), models);
-        byId("globalEvaluator").value = selectedGlobal;
-        byId("taskEvaluator").value = selectedTask;
-      }
-      const global = payload.global;
-      const task = payload.task || {};
-      const override = task.override || {};
-      byId("globalAutoEnable").checked = Boolean(global.autoEnableNewTasks);
-      byId("globalReminderTiming").value = global.reminderTiming;
-      byId("globalModelSelection").value = global.modelSelection;
-      byId("globalEvaluator").value = evaluatorValue(global.independentModel, global.independentEffort);
-      byId("taskEnabled").checked = Boolean(task.enabled);
-      byId("taskCurrentEffort").value = task.currentEffort || "medium";
-      byId("taskConfigMode").value = task.override ? "custom" : "inherit";
-      byId("taskReminderTiming").value = override.reminderTiming || global.reminderTiming;
-      byId("taskModelSelection").value = override.modelSelection || global.modelSelection;
-      byId("taskEvaluator").value = evaluatorValue(override.independentModel || global.independentModel, override.independentEffort || global.independentEffort);
-      toggleVisibility();
-    }
-
-    async function callTool(name, args) {
-      if (window.openai?.callTool) return window.openai.callTool(name, args);
-      const id = nextRequestId++;
-      window.parent.postMessage({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } }, "*");
-      return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          pendingRequests.delete(id);
-          reject(new Error("工具调用超时"));
-        }, 10000);
-        pendingRequests.set(id, {
-          resolve(value) { clearTimeout(timeout); resolve(value); },
-          reject(error) { clearTimeout(timeout); reject(error); }
-        });
-      });
-    }
-
-    document.querySelectorAll(".tab").forEach((button) => button.addEventListener("click", () => {
-      document.querySelectorAll(".tab,.section").forEach((node) => node.classList.remove("active"));
-      button.classList.add("active");
-      byId(button.dataset.tab).classList.add("active");
-    }));
-
-    ["globalModelSelection", "taskModelSelection", "taskConfigMode"].forEach((id) => {
-      byId(id).addEventListener("change", toggleVisibility);
-    });
-
-    byId("saveSettings").addEventListener("click", async () => {
-      const status = byId("saveStatus");
-      const sessionId = payload?.sessionId || "unknown";
-      const globalEvaluator = splitEvaluatorValue(byId("globalEvaluator").value);
-      const taskEvaluator = splitEvaluatorValue(byId("taskEvaluator").value);
-      status.textContent = "保存中…";
-      try {
-        const globalResult = await callTool("model_watch_update_settings", {
-          scope: "global",
-          sessionId,
-          patch: {
-            autoEnableNewTasks: byId("globalAutoEnable").checked,
-            reminderTiming: byId("globalReminderTiming").value,
-            modelSelection: byId("globalModelSelection").value,
-            independentModel: globalEvaluator.model,
-            independentEffort: globalEvaluator.effort || "medium"
-          }
-        });
-        const taskResult = await callTool("model_watch_update_settings", {
-          scope: "task",
-          sessionId,
-          patch: {
-            enabled: byId("taskEnabled").checked,
-            currentEffort: byId("taskCurrentEffort").value,
-            override: byId("taskConfigMode").value === "custom" ? {
-              reminderTiming: byId("taskReminderTiming").value,
-              modelSelection: byId("taskModelSelection").value,
-              independentModel: taskEvaluator.model,
-              independentEffort: taskEvaluator.effort || "medium"
-            } : null
-          }
-        });
-        render(taskResult?.structuredContent || globalResult?.structuredContent || payload);
-        status.textContent = "已保存";
-      } catch {
-        status.textContent = "保存失败，请重试";
-      }
-    });
-
-    window.addEventListener("message", (event) => {
-      if (event.source !== window.parent) return;
-      const message = event.data;
-      if (!message || message.jsonrpc !== "2.0") return;
-      if (message.id !== undefined && pendingRequests.has(message.id)) {
-        const pending = pendingRequests.get(message.id);
-        pendingRequests.delete(message.id);
-        if (message.error) pending.reject(message.error);
-        else pending.resolve(message.result);
-        return;
-      }
-      if (message.method === "ui/notifications/tool-result") render(message.params);
-    });
-
-    document.querySelectorAll("select[id$=\"Evaluator\"]").forEach((select) => populateEvaluatorSelect(select));
-    render(window.openai?.toolOutput);
+    let payload=null,nextRequestId=1; const pendingRequests=new Map(); const byId=(id)=>document.getElementById(id);
+    function toggle(){byId("taskOverride").hidden=byId("taskConfigMode").value!=="custom"}
+    function render(next){payload=next?.structuredContent||next||payload;if(!payload?.global)return;const g=payload.global,t=payload.task||{},o=t.override||{};byId("globalAutoEnable").checked=!!g.autoEnableNewTasks;byId("globalStatusIndicator").checked=g.showStatusIndicator!==false;byId("taskEnabled").checked=!!t.enabled;byId("taskPaused").checked=!!t.paused;byId("taskConfigMode").value=t.override?"custom":"inherit";byId("taskStatusIndicator").checked=(o.showStatusIndicator??g.showStatusIndicator)!==false;const dot=byId("taskStatusDot"),text=byId("taskStatusText");dot.className="status-dot"+(t.paused?" paused":t.enabled?" enabled":"");text.textContent=t.paused?"哨兵已暂停":t.enabled?"哨兵运行中":"当前任务未启用";toggle()}
+    async function callTool(name,args){if(window.openai?.callTool)return window.openai.callTool(name,args);const id=nextRequestId++;window.parent.postMessage({jsonrpc:"2.0",id,method:"tools/call",params:{name,arguments:args}},"*");return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{pendingRequests.delete(id);reject(new Error("工具调用超时"))},10000);pendingRequests.set(id,{resolve(v){clearTimeout(timeout);resolve(v)},reject(e){clearTimeout(timeout);reject(e)}})})}
+    document.querySelectorAll(".tab").forEach((button)=>button.addEventListener("click",()=>{document.querySelectorAll(".tab,.section").forEach((node)=>node.classList.remove("active"));button.classList.add("active");byId(button.dataset.tab).classList.add("active")}));
+    byId("taskConfigMode").addEventListener("change",toggle);
+    byId("saveSettings").addEventListener("click",async()=>{const status=byId("saveStatus"),sessionId=payload?.sessionId;status.textContent="保存中…";try{await callTool("model_watch_update_settings",{scope:"global",sessionId,patch:{autoEnableNewTasks:byId("globalAutoEnable").checked,showStatusIndicator:byId("globalStatusIndicator").checked}});if(sessionId){const custom=byId("taskConfigMode").value==="custom";await callTool("model_watch_update_settings",{scope:"task",sessionId,patch:{enabled:byId("taskEnabled").checked,paused:byId("taskPaused").checked,override:custom?{showStatusIndicator:byId("taskStatusIndicator").checked}:null}});render(await callTool("model_watch_get_status",{sessionId}));status.textContent="已保存"}else{render(await callTool("model_watch_open_settings",{}));status.textContent="已保存全局设置；请在具体任务中设置任务开关"}}catch{status.textContent="保存失败，请重试"}});
+    async function refreshStatus(){if(!payload?.sessionId||payload.sessionId==="unknown")return;try{render(await callTool("model_watch_get_status",{sessionId:payload.sessionId}))}catch{/* keep the last rendered state */}}
+    window.addEventListener("message",(event)=>{if(event.source!==window.parent)return;const message=event.data;if(!message||message.jsonrpc!=="2.0")return;if(message.id!==undefined&&pendingRequests.has(message.id)){const pending=pendingRequests.get(message.id);pendingRequests.delete(message.id);if(message.error)pending.reject(message.error);else pending.resolve(message.result);return}if(message.method==="ui/notifications/tool-result")render(message.params)});
+    window.addEventListener("focus",refreshStatus);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refreshStatus()});render(window.openai?.toolOutput);
   </script>
 </body>
 </html>

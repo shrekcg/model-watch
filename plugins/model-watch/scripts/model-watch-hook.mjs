@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 import { parseModelWatchCommand } from "../src/commands.mjs";
-import { buildMonitoringContext, buildSessionContext } from "../src/protocol.mjs";
+import { hashPrompt } from "../src/engine.mjs";
 import {
+  buildMonitoringContext,
+  buildSessionContext,
+  statusIndicatorInstruction
+} from "../src/protocol.mjs";
+import {
+  appendObservation,
   getEffectiveConfig,
   loadGlobalConfig,
   loadTaskState,
+  mutateTaskState,
   resolveDataDir,
-  saveTaskState,
-  taskStateExists,
-  validateEffort
+  taskStateExists
 } from "../src/state.mjs";
+
+const DEFAULT_MODELS = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"];
 
 async function readInput() {
   let input = "";
@@ -17,14 +24,11 @@ async function readInput() {
   return input.trim() ? JSON.parse(input) : {};
 }
 
-function output(eventName, additionalContext) {
+function continueOutput(eventName, additionalContext = "") {
   process.stdout.write(`${JSON.stringify({
     continue: true,
     suppressOutput: true,
-    hookSpecificOutput: {
-      hookEventName: eventName,
-      additionalContext
-    }
+    hookSpecificOutput: { hookEventName: eventName, additionalContext }
   })}\n`);
 }
 
@@ -32,95 +36,146 @@ function sessionIdFrom(input) {
   return String(input.session_id || input.sessionId || "unknown");
 }
 
+function modelFrom(input) {
+  const candidates = [input.model, input.model_slug, input.modelSlug, input.active_model, input.activeModel];
+  return candidates.find((value) => typeof value === "string" && value.trim())?.trim() || null;
+}
+
+function availableModels() {
+  const configured = String(process.env.MODEL_WATCH_AVAILABLE_MODELS || "")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+  return configured.length ? [...new Set(configured)] : DEFAULT_MODELS;
+}
+
+function observeTicket(task, actualModel, routeMatched) {
+  const ticket = task.routeTicket;
+  if (!ticket) return;
+  const result = !routeMatched
+    ? "superseded"
+    : actualModel === ticket.recommendedModel
+      ? "adopted"
+      : actualModel === ticket.originalModel
+        ? "kept"
+        : "other";
+  appendObservation(task, {
+    result,
+    originalModel: ticket.originalModel,
+    recommendedModel: ticket.recommendedModel,
+    actualModel
+  });
+}
+
 function handleSessionStart(input, dataDir) {
   const sessionId = sessionIdFrom(input);
   const source = String(input.source || "startup");
+  const model = modelFrom(input);
   const existed = taskStateExists(sessionId, dataDir);
-  const globalConfig = loadGlobalConfig(dataDir);
+  const global = loadGlobalConfig(dataDir);
   let task = loadTaskState(sessionId, dataDir);
-
-  if (!existed && globalConfig.autoEnableNewTasks) {
-    task = saveTaskState(sessionId, { ...task, enabled: true }, dataDir);
+  if (model || (!existed && global.autoEnableNewTasks)) {
+    task = mutateTaskState(sessionId, (draft) => ({
+      ...draft,
+      enabled: !existed && global.autoEnableNewTasks ? true : draft.enabled,
+      currentModel: model || draft.currentModel
+    }), dataDir);
   }
-  if (!task.enabled) return output("SessionStart", "");
-
-  const config = getEffectiveConfig(sessionId, dataDir);
-  return output("SessionStart", buildSessionContext({ sessionId, source, task, config }));
+  if (!task.enabled) return continueOutput("SessionStart");
+  return continueOutput(
+    "SessionStart",
+    buildSessionContext({ source, task, config: getEffectiveConfig(sessionId, dataDir) })
+  );
 }
 
-function handleUserPrompt(input, dataDir) {
+async function handleUserPrompt(input, dataDir) {
+  if (process.env.MODEL_WATCH_BYPASS === "1") return continueOutput("UserPromptSubmit");
   const sessionId = sessionIdFrom(input);
   const prompt = String(input.prompt || "");
-  const model = typeof input.model === "string" ? input.model : null;
+  const model = modelFrom(input);
   const command = parseModelWatchCommand(prompt);
+  const existed = taskStateExists(sessionId, dataDir);
   let task = loadTaskState(sessionId, dataDir);
-  const needsEffortPrompt =
-    !task.currentEffort && !task.effortPrompted && (task.enabled || command?.action === "on");
+  if (!existed && loadGlobalConfig(dataDir).autoEnableNewTasks) task.enabled = true;
 
-  if (model && model !== task.currentModel) task.currentModel = model;
+  if (command?.action === "on") { task.enabled = true; task.paused = false; }
+  if (command?.action === "off") { task.enabled = false; task.paused = false; task.routeTicket = null; }
+  if (command?.action === "pause") task.paused = true;
+  if (command?.action === "resume") { task.enabled = true; task.paused = false; }
 
-  const shouldResumeGate =
-    !command &&
-    Boolean(task.pendingGate?.taskText) &&
-    /(?:^|[，。！？\s])(继续|已切换|切好了|不切换|不切|保持当前|continue|keep)(?:$|[，。！？\s])/iu.test(prompt);
-  const resumedGateTask = shouldResumeGate ? task.pendingGate.taskText : null;
-  if (shouldResumeGate) task.pendingGate = null;
+  if (!task.enabled && !command) return continueOutput("UserPromptSubmit");
 
-  if (!task.enabled && !command && !resumedGateTask) return output("UserPromptSubmit", "");
-
-  if (command?.action === "on") task.enabled = true;
-  if (command?.action === "off") {
-    task.enabled = false;
-    task.pendingGate = null;
+  const promptHash = hashPrompt(command?.remainder || prompt);
+  const routeMatched = Boolean(task.routeTicket?.promptHash === promptHash);
+  if (task.routeTicket) {
+    observeTicket(task, model, routeMatched);
+    task.routeTicket = null;
   }
-  if (command?.action === "sync") {
-    try {
-      task.currentEffort = validateEffort(command.argument);
-      task.effortSource = "user";
-      task.effortPrompted = true;
-    } catch {
-      // The model will explain valid values through the injected command context.
-    }
-  }
-  if (command?.action === "gate-next" && command.remainder) {
-    task.pendingGate = {
-      status: "evaluating",
-      taskText: command.remainder.slice(0, 4000),
-      createdAt: new Date().toISOString()
-    };
-  }
+  const currentModel = model || task.currentModel;
+  task.currentModel = currentModel;
+  task.activeRequest = {
+    turnId: String(input.turn_id || input.turnId || "unknown"),
+    promptHash,
+    originalModel: currentModel,
+    createdAt: new Date().toISOString()
+  };
+  task = mutateTaskState(sessionId, () => task, dataDir);
 
-  if (needsEffortPrompt && command?.action !== "sync") {
-    task.effortPrompted = true;
+  if (["on", "off", "pause", "resume", "status", "settings", "unknown"].includes(command?.action)) {
+    return continueOutput(
+      "UserPromptSubmit",
+      buildMonitoringContext({
+        sessionId,
+        model,
+        availableModels: availableModels(),
+        task,
+        config: getEffectiveConfig(sessionId, dataDir),
+        command
+      })
+    );
   }
-
-  task = saveTaskState(sessionId, task, dataDir);
-  const explicitCommand = Boolean(command);
-  if (!task.enabled && !explicitCommand && !resumedGateTask) {
-    return output("UserPromptSubmit", "");
-  }
-
   const config = getEffectiveConfig(sessionId, dataDir);
-  const context = buildMonitoringContext({
-    sessionId,
-    model,
-    task,
-    config,
-    command,
-    needsEffortPrompt,
-    resumedGateTask
-  });
-  return output("UserPromptSubmit", context);
+  if (routeMatched) {
+    return continueOutput(
+      "UserPromptSubmit",
+      buildMonitoringContext({
+        sessionId,
+        model,
+        availableModels: availableModels(),
+        task,
+        config,
+        command,
+        routeMatched: true
+      })
+    );
+  }
+  if (task.paused) {
+    return continueOutput("UserPromptSubmit", statusIndicatorInstruction(task, config));
+  }
+  return continueOutput(
+    "UserPromptSubmit",
+    buildMonitoringContext({
+      sessionId,
+      model,
+      availableModels: availableModels(),
+      task,
+      config,
+      command
+    })
+  );
 }
 
 function handleCompact(input, dataDir, eventName) {
   const sessionId = sessionIdFrom(input);
   const task = loadTaskState(sessionId, dataDir);
-  if (!task.enabled) return output(eventName, "");
-  const config = getEffectiveConfig(sessionId, dataDir);
-  return output(
+  if (!task.enabled) return continueOutput(eventName);
+  return continueOutput(
     eventName,
-    buildSessionContext({ sessionId, source: eventName.toLowerCase(), task, config })
+    buildSessionContext({
+      source: eventName.toLowerCase(),
+      task,
+      config: getEffectiveConfig(sessionId, dataDir)
+    })
   );
 }
 
@@ -128,12 +183,11 @@ try {
   const input = await readInput();
   const dataDir = resolveDataDir();
   const eventName = String(input.hook_event_name || input.hookEventName || "");
-
   if (eventName === "SessionStart") handleSessionStart(input, dataDir);
-  else if (eventName === "UserPromptSubmit") handleUserPrompt(input, dataDir);
+  else if (eventName === "UserPromptSubmit") await handleUserPrompt(input, dataDir);
   else if (eventName === "PreCompact" || eventName === "PostCompact") {
     handleCompact(input, dataDir, eventName);
-  } else output(eventName || "UserPromptSubmit", "");
+  } else continueOutput(eventName || "UserPromptSubmit");
 } catch (error) {
   process.stderr.write(`model-watch hook warning: ${error instanceof Error ? error.message : String(error)}\n`);
   process.stdout.write(`${JSON.stringify({ continue: true, suppressOutput: true })}\n`);

@@ -1,80 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
-  <title id="title">模型哨兵单页设置界面</title>
-  <desc id="desc">在同一设置页中展示全局默认和当前任务配置，使用开关、条件显示的判断模型选项以及底部统一保存。</desc>
-
-  <rect width="1200" height="900" rx="26" fill="#111827"/>
-  <rect x="1" y="1" width="1198" height="898" rx="25" fill="none" stroke="#334155"/>
-
-  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
-    <g transform="translate(42 34)">
-      <rect width="1116" height="832" rx="22" fill="#1F2937" stroke="#475569"/>
-      <text x="32" y="48" font-size="26" font-weight="760" fill="#F8FAFC">模型哨兵</text>
-      <text x="32" y="76" font-size="15" fill="#94A3B8">全局默认服务于新任务，当前任务可以跟随全局或单独覆盖。</text>
-      <circle cx="1060" cy="48" r="7" fill="#37B878"/>
-      <circle cx="1060" cy="48" r="13" fill="none" stroke="#37B878" stroke-opacity=".22" stroke-width="6"/>
-
-      <g transform="translate(32 100)">
-        <rect width="516" height="40" rx="11" fill="#F8FAFC"/>
-        <text x="258" y="26" text-anchor="middle" font-size="15" font-weight="700" fill="#0F172A">设置</text>
-        <rect x="522" width="146" height="40" rx="11" fill="#374151"/>
-        <text x="595" y="26" text-anchor="middle" font-size="15" font-weight="700" fill="#CBD5E1">命令速查</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">模型哨兵设置界面</title>
+  <desc id="desc">同一页面展示全局默认与当前任务设置，包括自动启用、固定每轮评估、状态标识、暂停和任务覆盖。</desc>
+  <rect width="1200" height="760" rx="26" fill="#111827"/><rect x="1" y="1" width="1198" height="758" rx="25" fill="none" stroke="#334155"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif">
+    <g transform="translate(54 38)"><rect width="1092" height="684" rx="22" fill="#1F2937" stroke="#475569"/><text x="30" y="45" font-size="25" font-weight="760" fill="#F8FAFC">模型哨兵</text><text x="30" y="72" font-size="14" fill="#94A3B8">启用后每轮先判断，只在需要切换时提示。</text><circle cx="1040" cy="43" r="7" fill="#37B878"/>
+      <g transform="translate(30 100)"><rect width="1032" height="246" rx="16" fill="#111827" stroke="#374151"/><text x="0" y="-18" font-size="11" font-weight="800" letter-spacing="2" fill="#7486FF">01</text><text x="30" y="-18" font-size="18" font-weight="700" fill="#F8FAFC">全局默认</text>
+        <line x1="0" y1="62" x2="1032" y2="62" stroke="#374151"/><line x1="0" y1="123" x2="1032" y2="123" stroke="#374151"/><line x1="0" y1="184" x2="1032" y2="184" stroke="#374151"/>
+        <text x="18" y="36" font-size="14" font-weight="700" fill="#F8FAFC">新任务自动启用</text><text x="18" y="55" font-size="12" fill="#94A3B8">默认关闭</text><rect x="950" y="18" width="50" height="28" rx="14" fill="#374151"/><circle cx="965" cy="32" r="10" fill="#FFFFFF"/>
+        <text x="18" y="97" font-size="14" font-weight="700" fill="#F8FAFC">评估频率</text><rect x="690" y="76" width="310" height="36" rx="9" fill="#1F2937" stroke="#64748B"/><text x="706" y="99" font-size="13" fill="#F8FAFC">启用后固定每轮评估</text>
+        <text x="18" y="158" font-size="14" font-weight="700" fill="#F8FAFC">提示策略</text><rect x="690" y="137" width="310" height="36" rx="9" fill="#1F2937" stroke="#64748B"/><text x="706" y="160" font-size="13" fill="#F8FAFC">stay 静默 · change 提示</text>
+        <text x="18" y="219" font-size="14" font-weight="700" fill="#F8FAFC">显示状态标识</text><text x="18" y="238" font-size="12" fill="#94A3B8">普通回复末尾显示 🛰️</text><rect x="950" y="201" width="50" height="28" rx="14" fill="#5168FF"/><circle cx="985" cy="215" r="10" fill="#FFFFFF"/>
       </g>
-
-      <g transform="translate(32 174)">
-        <text x="0" y="18" font-size="11" font-weight="800" letter-spacing="2" fill="#7486FF">01</text>
-        <text x="30" y="18" font-size="18" font-weight="700" fill="#F8FAFC">全局默认</text>
-        <text x="0" y="45" font-size="13" fill="#94A3B8">新任务会从这里继承默认行为。</text>
-
-        <rect y="62" width="1052" height="196" rx="14" fill="#111827" stroke="#374151"/>
-        <line x1="0" y1="127" x2="1052" y2="127" stroke="#374151"/>
-        <line x1="0" y1="192" x2="1052" y2="192" stroke="#374151"/>
-        <text x="18" y="91" font-size="14" font-weight="700" fill="#F8FAFC">新任务自动启用</text>
-        <text x="18" y="111" font-size="12" fill="#94A3B8">开启后，所有新任务默认启动模型哨兵。</text>
-        <rect x="964" y="82" width="52" height="28" rx="14" fill="#5168FF"/>
-        <circle cx="1001" cy="96" r="10" fill="#FFFFFF"/>
-
-        <text x="18" y="156" font-size="14" font-weight="700" fill="#F8FAFC">提醒时机</text>
-        <text x="18" y="176" font-size="12" fill="#94A3B8">决定自动判断何时显示模型建议。</text>
-        <rect x="700" y="143" width="316" height="36" rx="9" fill="#1F2937" stroke="#64748B"/>
-        <text x="716" y="166" font-size="13" fill="#F8FAFC">仅需要切换时提醒</text>
-        <text x="990" y="166" text-anchor="end" font-size="12" fill="#94A3B8">⌄</text>
-
-        <text x="18" y="221" font-size="14" font-weight="700" fill="#F8FAFC">模型选择</text>
-        <text x="18" y="241" font-size="12" fill="#94A3B8">决定由哪个模型完成判断。</text>
-        <rect x="700" y="208" width="316" height="36" rx="9" fill="#1F2937" stroke="#64748B"/>
-        <text x="716" y="231" font-size="13" fill="#F8FAFC">跟随主模型</text>
-        <text x="990" y="231" text-anchor="end" font-size="12" fill="#94A3B8">⌄</text>
+      <g transform="translate(30 400)"><rect width="1032" height="188" rx="16" fill="#111827" stroke="#374151"/><text x="0" y="-18" font-size="11" font-weight="800" letter-spacing="2" fill="#7486FF">02</text><text x="30" y="-18" font-size="18" font-weight="700" fill="#F8FAFC">当前任务</text>
+        <line x1="0" y1="62" x2="1032" y2="62" stroke="#374151"/><line x1="0" y1="123" x2="1032" y2="123" stroke="#374151"/>
+        <text x="18" y="36" font-size="14" font-weight="700" fill="#F8FAFC">当前任务启用</text><text x="18" y="55" font-size="12" fill="#94A3B8">只影响当前对话</text><rect x="950" y="18" width="50" height="28" rx="14" fill="#5168FF"/><circle cx="985" cy="32" r="10" fill="#FFFFFF"/>
+        <text x="18" y="97" font-size="14" font-weight="700" fill="#F8FAFC">暂停哨兵评估</text><text x="18" y="116" font-size="12" fill="#94A3B8">主任务仍然正常进行</text><rect x="950" y="79" width="50" height="28" rx="14" fill="#374151"/><circle cx="965" cy="93" r="10" fill="#FFFFFF"/>
+        <text x="18" y="158" font-size="14" font-weight="700" fill="#F8FAFC">任务配置</text><rect x="690" y="137" width="310" height="36" rx="9" fill="#1F2937" stroke="#64748B"/><text x="706" y="160" font-size="13" fill="#F8FAFC">跟随全局</text>
       </g>
-
-      <g transform="translate(32 462)">
-        <text x="0" y="18" font-size="11" font-weight="800" letter-spacing="2" fill="#7486FF">02</text>
-        <text x="30" y="18" font-size="18" font-weight="700" fill="#F8FAFC">当前任务</text>
-        <text x="0" y="45" font-size="13" fill="#94A3B8">首次无法识别推理深度时，使用这里的选择作为判断基准。</text>
-
-        <rect y="62" width="1052" height="196" rx="14" fill="#111827" stroke="#374151"/>
-        <line x1="0" y1="127" x2="1052" y2="127" stroke="#374151"/>
-        <line x1="0" y1="192" x2="1052" y2="192" stroke="#374151"/>
-        <text x="18" y="91" font-size="14" font-weight="700" fill="#F8FAFC">当前任务启用</text>
-        <text x="18" y="111" font-size="12" fill="#94A3B8">关闭后暂停当前任务的自动监控。</text>
-        <rect x="964" y="82" width="52" height="28" rx="14" fill="#374151"/>
-        <circle cx="979" cy="96" r="10" fill="#FFFFFF"/>
-
-        <text x="18" y="156" font-size="14" font-weight="700" fill="#F8FAFC">当前推理深度</text>
-        <text x="18" y="176" font-size="12" fill="#94A3B8">用于首次判断推理深度；首次无法识别时，用于手动判断推理深度。</text>
-        <rect x="700" y="143" width="316" height="36" rx="9" fill="#1F2937" stroke="#64748B"/>
-        <text x="716" y="166" font-size="13" fill="#F8FAFC">medium（中度）</text>
-        <text x="990" y="166" text-anchor="end" font-size="12" fill="#94A3B8">⌄</text>
-
-        <text x="18" y="221" font-size="14" font-weight="700" fill="#F8FAFC">任务配置</text>
-        <text x="18" y="241" font-size="12" fill="#94A3B8">跟随全局，或展开当前任务的单独配置。</text>
-        <rect x="700" y="208" width="316" height="36" rx="9" fill="#1F2937" stroke="#64748B"/>
-        <text x="716" y="231" font-size="13" fill="#F8FAFC">跟随全局</text>
-        <text x="990" y="231" text-anchor="end" font-size="12" fill="#94A3B8">⌄</text>
-      </g>
-
-      <text x="32" y="790" font-size="13" fill="#94A3B8">独立评估 / 智能复核时，独立判断模型与深度会在对应区块内显示。</text>
-      <rect x="938" y="770" width="146" height="40" rx="11" fill="#5168FF"/>
-      <text x="1011" y="796" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">保存设置</text>
+      <text x="30" y="632" font-size="13" fill="#94A3B8">当前任务可启用、暂停，并单独覆盖运行标识。</text><rect x="916" y="614" width="146" height="42" rx="11" fill="#5168FF"/><text x="989" y="641" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">保存设置</text>
     </g>
   </g>
 </svg>

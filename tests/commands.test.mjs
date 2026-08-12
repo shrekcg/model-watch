@@ -2,33 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { parseModelWatchCommand } from "../plugins/model-watch/src/commands.mjs";
 
-test("parses bare enable command", () => {
-  assert.deepEqual(parseModelWatchCommand("$model-watch"), {
-    action: "on",
-    argument: null,
-    remainder: ""
-  });
+test("parses enable and lifecycle commands", () => {
+  assert.deepEqual(parseModelWatchCommand("$model-watch"), { action: "on", argument: null, remainder: "" });
+  assert.deepEqual(parseModelWatchCommand("!model-watch on"), { action: "on", argument: null, remainder: "" });
+  assert.equal(parseModelWatchCommand("!model-watch status").action, "status");
+  assert.equal(parseModelWatchCommand("$model-watch pause（暂停哨兵评估）").action, "pause");
+  assert.equal(parseModelWatchCommand("$model-watch resume").action, "resume");
+  assert.equal(parseModelWatchCommand("$model-watch off").action, "off");
 });
 
-test("parses Chinese command label and inline task", () => {
+test("parses inline check and preserves the task", () => {
   assert.deepEqual(
-    parseModelWatchCommand("$model-watch check-inline（并行检查），请继续登录方案"),
+    parseModelWatchCommand("$model-watch check-inline（检查并执行），请继续登录方案"),
     { action: "check-inline", argument: null, remainder: "请继续登录方案" }
   );
 });
 
-test("parses gate command and keeps task text", () => {
-  const parsed = parseModelWatchCommand("$model-watch gate-next，请继续修改刚才的登录方案。");
-  assert.equal(parsed.action, "gate-next");
-  assert.equal(parsed.remainder, "请继续修改刚才的登录方案。");
-});
-
-test("parses effort sync", () => {
-  assert.deepEqual(parseModelWatchCommand("$model-watch sync high"), {
-    action: "sync",
-    argument: "high",
-    remainder: ""
-  });
+test("removed commands are rejected", () => {
+  for (const action of ["gate-next", "sync", "accept", "ignore", "correct"]) {
+    assert.equal(parseModelWatchCommand(`$model-watch ${action}`).action, "unknown");
+  }
 });
 
 test("ignores ordinary prompt", () => {

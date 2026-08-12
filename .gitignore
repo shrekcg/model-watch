@@ -4,3 +4,7 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Local project context; keep release-facing decisions in README and public docs.
+MEMORY.md
+docs/product-decisions.md

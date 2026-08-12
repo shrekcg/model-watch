@@ -1,28 +1,29 @@
-import { mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync
+} from "node:fs";
+import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { dirname, join, parse, relative, resolve, sep } from "node:path";
 
 export const DEFAULT_GLOBAL_CONFIG = Object.freeze({
-  schemaVersion: 1,
+  schemaVersion: 3,
   autoEnableNewTasks: false,
-  reminderTiming: "on-change",
-  modelSelection: "main",
-  independentModel: null,
-  independentEffort: "medium"
+  showStatusIndicator: true
 });
 
-const REMINDER_TIMINGS = new Set(["on-change", "every-turn", "manual"]);
-const MODEL_SELECTIONS = new Set(["main", "independent", "hybrid"]);
-const EFFORTS = new Set([
-  "none",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-  "max",
-  "ultra"
-]);
+const ASSESSMENT_STATUSES = new Set(["stay", "change", "uncertain", "failed"]);
+const OBSERVATION_RESULTS = new Set(["adopted", "kept", "other", "superseded"]);
+const TICKET_TTL_MS = 15 * 60 * 1000;
+const LOCK_WAIT_MS = 5_000;
+const INVALID_LOCK_STALE_MS = 30_000;
 
 function inferPluginDataDir(cwd) {
   const absoluteCwd = resolve(cwd);
@@ -35,10 +36,12 @@ function inferPluginDataDir(cwd) {
     !parts[cacheIndex + 1] ||
     !parts[cacheIndex + 2]
   ) return null;
-
-  const marketplace = parts[cacheIndex + 1];
-  const plugin = parts[cacheIndex + 2];
-  return join(root, ...parts.slice(0, cacheIndex), "data", `${marketplace}-${plugin}`);
+  return join(
+    root,
+    ...parts.slice(0, cacheIndex),
+    "data",
+    `${parts[cacheIndex + 1]}-${parts[cacheIndex + 2]}`
+  );
 }
 
 export function resolveDataDir(env = process.env, cwd = process.cwd()) {
@@ -64,14 +67,13 @@ function taskPath(dataDir, sessionId) {
 export function resolveLatestTaskSession(dataDir = resolveDataDir()) {
   try {
     const tasksDir = join(dataDir, "tasks");
-    const candidates = readdirSync(tasksDir, { withFileTypes: true })
+    return readdirSync(tasksDir, { withFileTypes: true })
       .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
       .map((entry) => {
         const path = join(tasksDir, entry.name);
         return { sessionId: entry.name.slice(0, -5), modifiedAt: statSync(path).mtimeMs };
       })
-      .sort((left, right) => right.modifiedAt - left.modifiedAt);
-    return candidates[0]?.sessionId || null;
+      .sort((left, right) => right.modifiedAt - left.modifiedAt)[0]?.sessionId || null;
   } catch {
     return null;
   }
@@ -92,6 +94,52 @@ function writeJsonAtomic(path, value) {
   renameSync(temporaryPath, path);
 }
 
+function withFileLock(path, run) {
+  mkdirSync(dirname(path), { recursive: true });
+  const lockPath = `${path}.lock`;
+  const deadline = Date.now() + LOCK_WAIT_MS;
+  const token = randomUUID();
+  let descriptor;
+  while (descriptor === undefined) {
+    try {
+      descriptor = openSync(lockPath, "wx", 0o600);
+      writeFileSync(descriptor, JSON.stringify({ token, pid: process.pid, createdAt: Date.now() }));
+    } catch (error) {
+      if (error?.code !== "EEXIST" || Date.now() >= deadline) throw error;
+      if (canRemoveStaleLock(lockPath)) {
+        try { unlinkSync(lockPath); } catch { /* another waiter or owner won the race */ }
+        continue;
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 15);
+    }
+  }
+  try {
+    return run();
+  } finally {
+    closeSync(descriptor);
+    try {
+      const owner = readJson(lockPath, null);
+      if (owner?.token === token) unlinkSync(lockPath);
+    } catch { /* another process owns or cleared the lock */ }
+  }
+}
+
+function canRemoveStaleLock(lockPath) {
+  const owner = readJson(lockPath, null);
+  if (Number.isInteger(owner?.pid) && owner.pid > 0) return !isProcessAlive(owner.pid);
+  try { return Date.now() - statSync(lockPath).mtimeMs > INVALID_LOCK_STALE_MS; }
+  catch { return false; }
+}
+
+function isProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code !== "ESRCH";
+  }
+}
+
 export function loadGlobalConfig(dataDir = resolveDataDir()) {
   const stored = readJson(globalPath(dataDir), {});
   return normalizeGlobalConfig({ ...DEFAULT_GLOBAL_CONFIG, ...stored });
@@ -99,19 +147,42 @@ export function loadGlobalConfig(dataDir = resolveDataDir()) {
 
 export function saveGlobalConfig(config, dataDir = resolveDataDir()) {
   const normalized = normalizeGlobalConfig(config);
-  writeJsonAtomic(globalPath(dataDir), normalized);
+  withFileLock(globalPath(dataDir), () => writeJsonAtomic(globalPath(dataDir), normalized));
   return normalized;
 }
 
 export function updateGlobalConfig(patch, dataDir = resolveDataDir()) {
-  return saveGlobalConfig({ ...loadGlobalConfig(dataDir), ...patch }, dataDir);
+  return withFileLock(globalPath(dataDir), () => {
+    const normalized = normalizeGlobalConfig({ ...loadGlobalConfig(dataDir), ...patch });
+    writeJsonAtomic(globalPath(dataDir), normalized);
+    return normalized;
+  });
+}
+
+export function createTaskState(sessionId, enabled = false) {
+  const now = new Date().toISOString();
+  return {
+    schemaVersion: 3,
+    sessionId: sanitizeSessionId(sessionId),
+    enabled: Boolean(enabled),
+    paused: false,
+    override: null,
+    currentModel: null,
+    activeRequest: null,
+    routeTicket: null,
+    lastAssessment: null,
+    observationHistory: [],
+    createdAt: now,
+    updatedAt: now
+  };
 }
 
 export function loadTaskState(sessionId, dataDir = resolveDataDir()) {
-  const globalConfig = loadGlobalConfig(dataDir);
-  const fallback = createTaskState(sessionId, globalConfig.autoEnableNewTasks);
-  const stored = readJson(taskPath(dataDir, sessionId), fallback);
-  return normalizeTaskState({ ...fallback, ...stored }, sessionId);
+  const fallback = createTaskState(sessionId, loadGlobalConfig(dataDir).autoEnableNewTasks);
+  return normalizeTaskState(
+    { ...fallback, ...readJson(taskPath(dataDir, sessionId), fallback) },
+    sessionId
+  );
 }
 
 export function taskStateExists(sessionId, dataDir = resolveDataDir()) {
@@ -125,57 +196,36 @@ export function taskStateExists(sessionId, dataDir = resolveDataDir()) {
 
 export function saveTaskState(sessionId, state, dataDir = resolveDataDir()) {
   const normalized = normalizeTaskState(state, sessionId);
-  writeJsonAtomic(taskPath(dataDir, sessionId), normalized);
+  withFileLock(taskPath(dataDir, sessionId), () => writeJsonAtomic(taskPath(dataDir, sessionId), normalized));
   return normalized;
+}
+
+export function mutateTaskState(sessionId, mutate, dataDir = resolveDataDir()) {
+  const path = taskPath(dataDir, sessionId);
+  return withFileLock(path, () => {
+    const current = loadTaskState(sessionId, dataDir);
+    const next = normalizeTaskState(mutate(structuredClone(current)) || current, sessionId);
+    writeJsonAtomic(path, next);
+    return next;
+  });
 }
 
 export function updateTaskState(sessionId, patch, dataDir = resolveDataDir()) {
-  return saveTaskState(sessionId, { ...loadTaskState(sessionId, dataDir), ...patch }, dataDir);
+  return mutateTaskState(sessionId, (task) => ({ ...task, ...patch }), dataDir);
 }
 
 export function getEffectiveConfig(sessionId, dataDir = resolveDataDir()) {
-  const globalConfig = loadGlobalConfig(dataDir);
+  const global = loadGlobalConfig(dataDir);
   const task = loadTaskState(sessionId, dataDir);
-  const override = task.override || {};
-  return normalizeGlobalConfig({ ...globalConfig, ...override });
-}
-
-export function createTaskState(sessionId, enabled = false) {
-  return {
-    schemaVersion: 1,
-    sessionId: sanitizeSessionId(sessionId),
-    enabled: Boolean(enabled),
-    override: null,
-    currentModel: null,
-    currentEffort: null,
-    effortSource: null,
-    effortPrompted: false,
-    lastAssessment: null,
-    pendingGate: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
+  return normalizeGlobalConfig({ ...global, ...(task.override || {}) });
 }
 
 export function normalizeGlobalConfig(config) {
-  const normalized = {
-    schemaVersion: 1,
+  return {
+    schemaVersion: 3,
     autoEnableNewTasks: Boolean(config.autoEnableNewTasks),
-    reminderTiming: REMINDER_TIMINGS.has(config.reminderTiming)
-      ? config.reminderTiming
-      : DEFAULT_GLOBAL_CONFIG.reminderTiming,
-    modelSelection: MODEL_SELECTIONS.has(config.modelSelection)
-      ? config.modelSelection
-      : DEFAULT_GLOBAL_CONFIG.modelSelection,
-    independentModel:
-      typeof config.independentModel === "string" && config.independentModel.trim()
-        ? config.independentModel.trim()
-        : null,
-    independentEffort: EFFORTS.has(config.independentEffort)
-      ? config.independentEffort
-      : DEFAULT_GLOBAL_CONFIG.independentEffort
+    showStatusIndicator: config.showStatusIndicator !== false
   };
-  return normalized;
 }
 
 export function normalizeTaskOverride(patch) {
@@ -183,57 +233,111 @@ export function normalizeTaskOverride(patch) {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new TypeError("Task override must be an object or null.");
   }
-  const result = {};
-  if ("reminderTiming" in patch) {
-    if (!REMINDER_TIMINGS.has(patch.reminderTiming)) throw new RangeError("Invalid reminderTiming.");
-    result.reminderTiming = patch.reminderTiming;
-  }
-  if ("modelSelection" in patch) {
-    if (!MODEL_SELECTIONS.has(patch.modelSelection)) throw new RangeError("Invalid modelSelection.");
-    result.modelSelection = patch.modelSelection;
-  }
-  if ("independentModel" in patch) {
-    result.independentModel =
-      typeof patch.independentModel === "string" && patch.independentModel.trim()
-        ? patch.independentModel.trim()
-        : null;
-  }
-  if ("independentEffort" in patch) {
-    if (!EFFORTS.has(patch.independentEffort)) throw new RangeError("Invalid independentEffort.");
-    result.independentEffort = patch.independentEffort;
-  }
-  return result;
+  const allowed = ["showStatusIndicator"];
+  const normalized = normalizeGlobalConfig({
+    ...DEFAULT_GLOBAL_CONFIG,
+    ...Object.fromEntries(Object.entries(patch).filter(([key]) => allowed.includes(key)))
+  });
+  return Object.fromEntries(allowed.map((key) => [key, normalized[key]]));
 }
 
 function normalizeTaskState(state, sessionId) {
   const now = new Date().toISOString();
-  const pendingGateCreatedAt = Date.parse(state.pendingGate?.createdAt || "");
-  const pendingGateFresh =
-    Number.isFinite(pendingGateCreatedAt) && Date.now() - pendingGateCreatedAt < 24 * 60 * 60 * 1000;
   return {
-    schemaVersion: 1,
+    schemaVersion: 3,
     sessionId: sanitizeSessionId(sessionId),
     enabled: Boolean(state.enabled),
+    paused: Boolean(state.paused),
     override: state.override ? normalizeTaskOverride(state.override) : null,
-    currentModel: typeof state.currentModel === "string" && state.currentModel ? state.currentModel : null,
-    currentEffort: EFFORTS.has(state.currentEffort) ? state.currentEffort : null,
-    effortSource: ["user", "default", "detected"].includes(state.effortSource)
-      ? state.effortSource
-      : null,
-    effortPrompted: Boolean(state.effortPrompted),
-    lastAssessment: state.lastAssessment && typeof state.lastAssessment === "object"
-      ? state.lastAssessment
-      : null,
-    pendingGate:
-      pendingGateFresh && state.pendingGate && typeof state.pendingGate === "object"
-        ? state.pendingGate
-        : null,
+    currentModel: cleanString(state.currentModel, 160),
+    activeRequest: normalizeActiveRequest(state.activeRequest),
+    routeTicket: normalizeRouteTicket(state.routeTicket),
+    lastAssessment: normalizeAssessment(state.lastAssessment),
+    observationHistory: normalizeObservationHistory(state.observationHistory),
     createdAt: typeof state.createdAt === "string" ? state.createdAt : now,
     updatedAt: now
   };
 }
 
-export function validateEffort(effort) {
-  if (!EFFORTS.has(effort)) throw new RangeError(`Unsupported reasoning effort: ${effort}`);
-  return effort;
+function normalizeActiveRequest(request) {
+  if (!request || typeof request !== "object") return null;
+  return {
+    turnId: cleanString(request.turnId, 200),
+    promptHash: cleanHash(request.promptHash),
+    originalModel: cleanString(request.originalModel, 160),
+    createdAt: typeof request.createdAt === "string" ? request.createdAt : new Date().toISOString()
+  };
+}
+
+function normalizeRouteTicket(ticket) {
+  if (!ticket || typeof ticket !== "object") return null;
+  const expiresAt = typeof ticket.expiresAt === "string" ? ticket.expiresAt : null;
+  if (!expiresAt || Date.parse(expiresAt) <= Date.now()) return null;
+  return {
+    turnId: cleanString(ticket.turnId, 200),
+    promptHash: cleanHash(ticket.promptHash),
+    originalModel: cleanString(ticket.originalModel, 160),
+    recommendedModel: cleanString(ticket.recommendedModel, 160),
+    createdAt: typeof ticket.createdAt === "string" ? ticket.createdAt : new Date().toISOString(),
+    expiresAt
+  };
+}
+
+export function createRouteTicket(activeRequest, recommendedModel, now = Date.now()) {
+  if (!activeRequest?.promptHash || !recommendedModel) return null;
+  return normalizeRouteTicket({
+    ...activeRequest,
+    recommendedModel,
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + TICKET_TTL_MS).toISOString()
+  });
+}
+
+export function normalizeAssessment(assessment) {
+  if (!assessment || typeof assessment !== "object") return null;
+  return {
+    status: ASSESSMENT_STATUSES.has(assessment.status) ? assessment.status : "failed",
+    recommendedModel: cleanString(assessment.recommendedModel, 160),
+    rationale: cleanString(assessment.rationale, 600) || "未提供原因",
+    evaluator: cleanString(assessment.evaluator, 80) || "unknown",
+    engineVersion: cleanString(assessment.engineVersion, 80) || "2.0.0",
+    createdAt: typeof assessment.createdAt === "string"
+      ? assessment.createdAt
+      : new Date().toISOString()
+  };
+}
+
+export function appendObservation(task, observation) {
+  const result = OBSERVATION_RESULTS.has(observation.result) ? observation.result : "other";
+  const entry = {
+    result,
+    originalModel: cleanString(observation.originalModel, 160),
+    recommendedModel: cleanString(observation.recommendedModel, 160),
+    actualModel: cleanString(observation.actualModel, 160),
+    createdAt: new Date().toISOString()
+  };
+  task.observationHistory = [...normalizeObservationHistory(task.observationHistory), entry].slice(-12);
+  return entry;
+}
+
+function normalizeObservationHistory(history) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .filter((entry) => entry && typeof entry === "object" && OBSERVATION_RESULTS.has(entry.result))
+    .map((entry) => ({
+      result: entry.result,
+      originalModel: cleanString(entry.originalModel, 160),
+      recommendedModel: cleanString(entry.recommendedModel, 160),
+      actualModel: cleanString(entry.actualModel, 160),
+      createdAt: typeof entry.createdAt === "string" ? entry.createdAt : new Date(0).toISOString()
+    }))
+    .slice(-12);
+}
+
+function cleanString(value, maxLength) {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, maxLength) : null;
+}
+
+function cleanHash(value) {
+  return typeof value === "string" && /^[a-f0-9]{64}$/u.test(value) ? value : null;
 }
