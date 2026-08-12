@@ -1,12 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="590" viewBox="0 0 1200 590" role="img" aria-labelledby="title desc">
-  <title id="title">模型哨兵实践示例</title>
-  <desc id="desc">展示保持当前模型、建议更轻量模型和建议更强模型三种典型结果。</desc>
-  <rect width="1200" height="590" rx="26" fill="#F8FAFC"/><rect x="1" y="1" width="1198" height="588" rx="25" fill="none" stroke="#CBD5E1"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="570" viewBox="0 0 1200 570" role="img" aria-labelledby="title desc">
+  <title id="title">模型哨兵的两轮连续任务示例</title>
+  <desc id="desc">第一轮完成基础架构并建立上下文；第二轮的高风险审计触发模型建议，用户选择模型后原样重发并开始主任务。</desc>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#6B7B92"/></marker></defs>
+  <rect width="1200" height="570" rx="26" fill="#F7F9FC"/>
+  <rect x="1" y="1" width="1198" height="568" rx="25" fill="none" stroke="#D6DEEA"/>
   <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif">
-    <text x="58" y="58" font-size="34" font-weight="760" fill="#0F172A">它会在什么时候给出建议</text>
-    <text x="58" y="88" font-size="17" fill="#64748B">具体结论来自当时上下文，不是任务类型映射。</text>
-    <g transform="translate(58 128)"><rect width="338" height="392" rx="20" fill="#FFFFFF" stroke="#CBD5E1"/><rect x="20" y="20" width="112" height="28" rx="14" fill="#E2E8F0"/><text x="76" y="39" text-anchor="middle" font-size="14" font-weight="700" fill="#334155">保持当前模型</text><text x="20" y="84" font-size="15" font-weight="700" fill="#0F172A">本轮真实输入</text><text x="20" y="116" font-size="15" fill="#475569">统一上面三个标题的格式。</text><line x1="20" y1="145" x2="318" y2="145" stroke="#E2E8F0"/><text x="20" y="185" font-size="15" font-weight="700" fill="#64748B">判断结果</text><text x="20" y="222" font-size="21" font-weight="760" fill="#0F172A">直接执行任务</text><text x="20" y="258" font-size="14" fill="#64748B">操作简单且一次完成，</text><text x="20" y="282" font-size="14" fill="#64748B">切换收益有限。</text><rect x="20" y="322" width="298" height="48" rx="12" fill="#F1F5F9"/><text x="169" y="352" text-anchor="middle" font-size="14" fill="#64748B">无模型建议</text></g>
-    <g transform="translate(431 128)"><rect width="338" height="392" rx="20" fill="#FFFFFF" stroke="#14B8A6"/><rect x="20" y="20" width="124" height="28" rx="14" fill="#ECFDF5"/><text x="82" y="39" text-anchor="middle" font-size="14" font-weight="700" fill="#0F766E">建议轻量模型</text><text x="20" y="84" font-size="15" font-weight="700" fill="#0F172A">本轮真实输入</text><text x="20" y="116" font-size="15" fill="#475569">继续处理剩余 30 条同类文案。</text><line x1="20" y1="145" x2="318" y2="145" stroke="#E2E8F0"/><text x="20" y="185" font-size="15" font-weight="700" fill="#0F766E">模型建议</text><text x="20" y="222" font-size="20" font-weight="760" fill="#0F172A">切换至 GPT-5.6 Luna</text><text x="20" y="258" font-size="14" fill="#64748B">任务重复、边界清晰，</text><text x="20" y="282" font-size="14" fill="#64748B">轻量模型更节省额度。</text><rect x="20" y="322" width="298" height="48" rx="12" fill="#ECFDF5"/><text x="169" y="352" text-anchor="middle" font-size="14" fill="#0F766E">用户手动选择是否切换</text></g>
-    <g transform="translate(804 128)"><rect width="338" height="392" rx="20" fill="#0F172A"/><rect x="20" y="20" width="124" height="28" rx="14" fill="#134E4A"/><text x="82" y="39" text-anchor="middle" font-size="14" font-weight="700" fill="#99F6E4">建议更强模型</text><text x="20" y="84" font-size="15" font-weight="700" fill="#F8FAFC">本轮真实输入</text><text x="20" y="116" font-size="15" fill="#CBD5E1">设计支付、退款与异常补偿。</text><line x1="20" y1="145" x2="318" y2="145" stroke="#334155"/><text x="20" y="185" font-size="15" font-weight="700" fill="#5EEAD4">模型建议</text><text x="20" y="222" font-size="20" font-weight="760" fill="#F8FAFC">切换至 GPT-5.6 Sol</text><text x="20" y="258" font-size="14" fill="#94A3B8">任务跨系统且影响较高，</text><text x="20" y="282" font-size="14" fill="#94A3B8">需要整合多项约束。</text><rect x="20" y="322" width="298" height="48" rx="12" fill="#10272A"/><text x="169" y="352" text-anchor="middle" font-size="14" fill="#99F6E4">用户手动选择是否切换</text></g>
+    <text x="58" y="60" font-size="36" font-weight="780" fill="#152238">从普通推进到需要人工切换</text>
+    <text x="58" y="92" font-size="18" fill="#64748B">建议由连续上下文决定，而不是给某一类任务贴固定标签。</text>
+    <g transform="translate(58 132)">
+      <g transform="translate(0 0)">
+        <rect width="336" height="340" rx="20" fill="#FFFFFF" stroke="#CBD6E4"/>
+        <rect x="22" y="22" width="104" height="30" rx="15" fill="#E7ECF4"/>
+        <text x="74" y="43" text-anchor="middle" font-size="14" font-weight="750" fill="#40516A">第一轮</text>
+        <text x="22" y="91" font-size="16" font-weight="750" fill="#40516A">用户请求</text>
+        <text x="22" y="125" font-size="20" font-weight="760" fill="#152238">设计订阅支付的基础架构</text>
+        <path d="M22 153H314" stroke="#E2E8F0"/>
+        <text x="22" y="191" font-size="16" font-weight="750" fill="#40516A">哨兵结果</text>
+        <text x="22" y="226" font-size="21" font-weight="780" fill="#152238">正常完成主任务</text>
+        <text x="22" y="260" font-size="16" fill="#64748B">内部完成判断，不展示过程。</text>
+        <text x="22" y="288" font-size="16" fill="#64748B">本轮同时建立任务上下文。</text>
+      </g>
+      <path d="M350 170H400" stroke="#6B7B92" stroke-width="2.5" marker-end="url(#arrow)"/>
+      <g transform="translate(414 0)">
+        <rect width="336" height="340" rx="20" fill="#F1EFFF" stroke="#B8B5F6"/>
+        <rect x="22" y="22" width="104" height="30" rx="15" fill="#DFDBFF"/>
+        <text x="74" y="43" text-anchor="middle" font-size="14" font-weight="750" fill="#514D8C">第二轮</text>
+        <text x="22" y="91" font-size="16" font-weight="750" fill="#514D8C">用户请求</text>
+        <text x="22" y="125" font-size="20" font-weight="760" fill="#302D6F">审计支付、退款与回滚风险</text>
+        <path d="M22 153H314" stroke="#D5D0FB"/>
+        <text x="22" y="191" font-size="16" font-weight="750" fill="#514D8C">哨兵结果</text>
+        <text x="22" y="226" font-size="21" font-weight="780" fill="#302D6F">展示模型建议</text>
+        <text x="22" y="260" font-size="16" fill="#5A55A0">不执行审计主任务。</text>
+        <text x="22" y="288" font-size="16" fill="#5A55A0">只解释为何建议切换。</text>
+      </g>
+      <path d="M764 170H814" stroke="#6B7B92" stroke-width="2.5" marker-end="url(#arrow)"/>
+      <g transform="translate(828 0)">
+        <rect width="314" height="340" rx="20" fill="#E9FBF7" stroke="#69CDBC"/>
+        <rect x="22" y="22" width="128" height="30" rx="15" fill="#D3F5EC"/>
+        <text x="86" y="43" text-anchor="middle" font-size="14" font-weight="750" fill="#148476">由用户决定</text>
+        <text x="22" y="91" font-size="16" font-weight="750" fill="#387B74">原生模型选择器</text>
+        <text x="22" y="125" font-size="20" font-weight="760" fill="#135E57">选择模型或保持当前模型</text>
+        <path d="M22 153H292" stroke="#C6EDE4"/>
+        <text x="22" y="191" font-size="16" font-weight="750" fill="#387B74">下一步</text>
+        <text x="22" y="226" font-size="21" font-weight="780" fill="#135E57">原样重发第二轮请求</text>
+        <text x="22" y="260" font-size="16" fill="#387B74">命中后直接开始审计任务。</text>
+        <text x="22" y="288" font-size="16" fill="#387B74">不重复做模型判断。</text>
+      </g>
+    </g>
+    <text x="58" y="522" font-size="16" fill="#64748B">切换建议是“暂停并交给你选择”，不是自动路由，也不是对当前模型能力的绝对否定。</text>
   </g>
 </svg>

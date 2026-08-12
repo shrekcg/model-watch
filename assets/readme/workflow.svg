@@ -1,25 +1,59 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
-  <title id="title">模型哨兵前置评估工作流</title>
-  <desc id="desc">本轮真实输入进入当前模型后先完成同会话判断；保持时执行主任务，需要切换时暂停并提示，用户选择模型后原样重发。</desc>
-  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#64748B"/></marker></defs>
-  <rect width="1200" height="620" rx="26" fill="#F8FAFC"/><rect x="1" y="1" width="1198" height="618" rx="25" fill="none" stroke="#CBD5E1"/>
+  <title id="title">模型哨兵的连续任务工作流</title>
+  <desc id="desc">用户按任务启用模型哨兵，真实请求经过内部判断；当前模型合适时直接执行，需要切换时用户选择模型并原样重发后继续。</desc>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#6B7B92"/></marker></defs>
+  <rect width="1200" height="620" rx="26" fill="#F7F9FC"/>
+  <rect x="1" y="1" width="1198" height="618" rx="25" fill="none" stroke="#D6DEEA"/>
   <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif">
-    <text x="58" y="58" font-size="34" font-weight="760" fill="#0F172A">一条请求如何通过模型哨兵</text>
-    <text x="58" y="88" font-size="17" fill="#64748B">当前对话模型先判断；这是逻辑拦截，不是模型调用前的硬阻断。</text>
-    <g transform="translate(58 128)">
-      <rect width="184" height="116" rx="18" fill="#FFFFFF" stroke="#CBD5E1"/><circle cx="28" cy="28" r="13" fill="#E2E8F0"/><text x="28" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">1</text><text x="22" y="69" font-size="18" font-weight="700" fill="#0F172A">用户发送请求</text><text x="22" y="94" font-size="14" fill="#64748B">保留本轮原始输入</text>
-      <path d="M196 58H228" stroke="#64748B" stroke-width="2.5" marker-end="url(#arrow)"/>
-      <g transform="translate(240)"><rect width="224" height="116" rx="18" fill="#FFFFFF" stroke="#CBD5E1"/><circle cx="28" cy="28" r="13" fill="#E2E8F0"/><text x="28" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">2</text><text x="22" y="69" font-size="18" font-weight="700" fill="#0F172A">Hook 组织证据</text><text x="22" y="94" font-size="14" fill="#64748B">模型 · 历史 · 配置</text></g>
-      <path d="M476 58H508" stroke="#64748B" stroke-width="2.5" marker-end="url(#arrow)"/>
-      <g transform="translate(520)"><rect width="250" height="116" rx="18" fill="#ECFDF5" stroke="#14B8A6"/><circle cx="28" cy="28" r="13" fill="#99F6E4"/><text x="28" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="#115E59">3</text><text x="22" y="69" font-size="18" font-weight="700" fill="#115E59">推荐引擎判断</text><text x="22" y="94" font-size="14" fill="#0F766E">模型原生判断，不做映射</text></g>
-      <path d="M782 58H814" stroke="#64748B" stroke-width="2.5" marker-end="url(#arrow)"/>
-      <g transform="translate(826)"><rect width="258" height="116" rx="18" fill="#0F172A"/><circle cx="28" cy="28" r="13" fill="#134E4A"/><text x="28" y="33" text-anchor="middle" font-size="13" font-weight="700" fill="#99F6E4">4</text><text x="22" y="69" font-size="18" font-weight="700" fill="#F8FAFC">输出判断结果</text><text x="22" y="94" font-size="14" fill="#94A3B8">stay / change / 放行</text></g>
+    <text x="58" y="62" font-size="36" font-weight="780" fill="#152238">连续任务中的一次人工决策</text>
+    <text x="58" y="94" font-size="18" fill="#64748B">开关命令不评估；真正的任务请求才进入内部判断。</text>
+    <g transform="translate(58 135)">
+      <g transform="translate(0 0)">
+        <rect width="205" height="126" rx="18" fill="#FFFFFF" stroke="#CBD6E4"/>
+        <text x="24" y="34" font-size="14" font-weight="750" fill="#6D7CFF">步骤 1</text>
+        <text x="24" y="70" font-size="20" font-weight="760" fill="#152238">按任务启用</text>
+        <text x="24" y="101" font-size="16" fill="#536276">!model-watch on</text>
+      </g>
+      <path d="M217 63H257" stroke="#6B7B92" stroke-width="2.5" marker-end="url(#arrow)"/>
+      <g transform="translate(270 0)">
+        <rect width="205" height="126" rx="18" fill="#FFFFFF" stroke="#CBD6E4"/>
+        <text x="24" y="34" font-size="14" font-weight="750" fill="#6D7CFF">步骤 2</text>
+        <text x="24" y="70" font-size="20" font-weight="760" fill="#152238">发送真实任务</text>
+        <text x="24" y="101" font-size="16" fill="#536276">输入 + 可见历史</text>
+      </g>
+      <path d="M487 63H527" stroke="#6B7B92" stroke-width="2.5" marker-end="url(#arrow)"/>
+      <g transform="translate(540 0)">
+        <rect width="252" height="126" rx="18" fill="#E9FBF7" stroke="#69CDBC"/>
+        <text x="24" y="34" font-size="14" font-weight="750" fill="#148476">步骤 3</text>
+        <text x="24" y="70" font-size="20" font-weight="760" fill="#135E57">当前主模型内部判断</text>
+        <text x="24" y="101" font-size="16" fill="#387B74">不展示判断过程</text>
+      </g>
+      <path d="M804 63H844" stroke="#6B7B92" stroke-width="2.5" marker-end="url(#arrow)"/>
+      <g transform="translate(857 0)">
+        <rect width="227" height="126" rx="18" fill="#FFFFFF" stroke="#CBD6E4"/>
+        <text x="24" y="34" font-size="14" font-weight="750" fill="#6D7CFF">步骤 4</text>
+        <text x="24" y="70" font-size="20" font-weight="760" fill="#152238">保存判断结果</text>
+        <text x="24" y="101" font-size="16" fill="#536276">仅保留元数据</text>
+      </g>
     </g>
-    <g transform="translate(58 286)">
-      <rect width="1084" height="220" rx="20" fill="#FFFFFF" stroke="#CBD5E1"/>
-      <g transform="translate(28 28)"><rect width="492" height="164" rx="16" fill="#F1F5F9"/><rect width="8" height="164" rx="4" fill="#64748B"/><text x="28" y="38" font-size="16" font-weight="700" fill="#334155">当前模型合适 / 判断失败</text><text x="28" y="72" font-size="23" font-weight="760" fill="#0F172A">直接执行主任务</text><text x="28" y="107" font-size="14" fill="#64748B">没有模型建议；失败也不拦住工作。</text><text x="28" y="136" font-size="14" fill="#0F766E">可选在普通回复末尾显示 🛰️</text></g>
-      <g transform="translate(564 28)"><rect width="492" height="164" rx="16" fill="#ECFDF5" stroke="#14B8A6"/><rect width="8" height="164" rx="4" fill="#14B8A6"/><text x="28" y="38" font-size="16" font-weight="700" fill="#0F766E">推荐模型发生变化</text><text x="28" y="72" font-size="23" font-weight="760" fill="#115E59">先显示两行建议</text><text x="28" y="107" font-size="14" fill="#0F766E">用户切换或保持模型，再发送同一请求。</text><text x="28" y="136" font-size="14" fill="#64748B">请求指纹命中后直接执行，不重复评估。</text></g>
+    <g transform="translate(58 315)">
+      <rect width="1084" height="230" rx="20" fill="#FFFFFF" stroke="#CBD6E4"/>
+      <path d="M542 38V192" stroke="#D6DEEA" stroke-width="2" stroke-dasharray="6 7"/>
+      <g transform="translate(30 30)">
+        <rect width="468" height="170" rx="16" fill="#F2F5F9"/>
+        <text x="26" y="38" font-size="15" font-weight="750" fill="#536276">当前模型仍然合适 / 判断失败</text>
+        <text x="26" y="79" font-size="25" font-weight="780" fill="#152238">直接执行主任务</text>
+        <text x="26" y="113" font-size="16" fill="#536276">用户只看到正常的任务结果。</text>
+        <text x="26" y="141" font-size="16" fill="#536276">第一轮通常在这里完成并积累上下文。</text>
+      </g>
+      <g transform="translate(586 30)">
+        <rect width="468" height="170" rx="16" fill="#F0EEFF" stroke="#B8B5F6"/>
+        <text x="26" y="38" font-size="15" font-weight="750" fill="#5A55B4">切换收益明确</text>
+        <text x="26" y="79" font-size="25" font-weight="780" fill="#302D6F">展示模型建议，暂停主任务</text>
+        <text x="26" y="113" font-size="16" fill="#514D8C">用户在原生选择器中选任意模型。</text>
+        <text x="26" y="141" font-size="16" fill="#514D8C">原样重发同一请求后，直接继续执行。</text>
+      </g>
     </g>
-    <g transform="translate(58 532)"><rect width="1084" height="54" rx="15" fill="#0F172A"/><text x="24" y="34" font-size="15" font-weight="700" fill="#5EEAD4">共同原则</text><text x="118" y="34" font-size="15" fill="#E2E8F0">不自动切模型 · 不保存任务正文 · 不修改主请求 · 评估失败时放行</text></g>
+    <text x="58" y="584" font-size="16" fill="#64748B">模型哨兵不自动切换模型，不保存任务正文或附件，也不要求用户输入“继续”。</text>
   </g>
 </svg>

@@ -1,35 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
   <title id="title">模型哨兵</title>
-  <desc id="desc">真实请求进入当前对话模型后，先完成同会话判断；只在值得切换时暂停主任务并给出建议。</desc>
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0B1020"/><stop offset="1" stop-color="#15233F"/></linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#5EEAD4"/><stop offset="1" stop-color="#7C8CFF"/></linearGradient>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#5EEAD4"/></marker>
-  </defs>
-  <rect width="1200" height="380" rx="28" fill="url(#bg)"/>
+  <desc id="desc">一个按任务启用的 Codex 模型建议插件：当前主模型先做内部判断，合适时继续，需要切换时暂停并交给用户选择。</desc>
+  <rect width="1200" height="380" rx="28" fill="#0B1220"/>
+  <path d="M64 68H1136M64 312H1136" stroke="#233047" stroke-width="1"/>
   <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif">
-    <g transform="translate(64 58)">
-      <text y="18" font-size="15" font-weight="700" letter-spacing="2" fill="#5EEAD4">CODEX 模型路由建议</text>
-      <text y="105" font-size="68" font-weight="760" fill="#F8FAFC">模型哨兵</text>
-      <text y="153" font-size="25" fill="#CBD5E1">真实输入到达后，由当前模型先完成同会话判断</text>
-      <text y="197" font-size="18" fill="#94A3B8">模型原生判断 · 通用场景 · 失败放行 · 用户保留选择权</text>
-      <g transform="translate(0 232)">
-        <rect width="155" height="38" rx="19" fill="#17213A" stroke="#334155"/><text x="77" y="25" text-anchor="middle" font-size="14" fill="#E2E8F0">不做固定映射</text>
-        <rect x="169" width="168" height="38" rx="19" fill="#17213A" stroke="#334155"/><text x="253" y="25" text-anchor="middle" font-size="14" fill="#E2E8F0">不保存任务正文</text>
+    <g transform="translate(64 70)">
+      <text y="18" font-size="15" font-weight="700" letter-spacing="2" fill="#69E7D0">CODEX · 按任务模型建议</text>
+      <text y="101" font-size="70" font-weight="780" fill="#F8FAFC">模型哨兵</text>
+      <text y="147" font-size="25" fill="#D3DCEB">先理解连续对话，再决定是否值得切换模型</text>
+      <text y="186" font-size="18" fill="#9AA9BD">默认关闭 · 不自动切换 · 只在需要时暂停任务</text>
+      <g transform="translate(0 220)">
+        <rect width="144" height="40" rx="12" fill="#131E31" stroke="#31415C"/>
+        <text x="72" y="26" text-anchor="middle" font-size="15" font-weight="650" fill="#D3DCEB">当前主模型判断</text>
+        <rect x="158" width="146" height="40" rx="12" fill="#131E31" stroke="#31415C"/>
+        <text x="231" y="26" text-anchor="middle" font-size="15" font-weight="650" fill="#D3DCEB">用户手动选择</text>
       </g>
     </g>
-    <g transform="translate(724 58)">
-      <rect width="412" height="264" rx="24" fill="#101A30" stroke="#334155"/>
-      <text x="28" y="42" font-size="14" font-weight="700" letter-spacing="1" fill="#94A3B8">本轮前置判断</text>
-      <g transform="translate(28 70)">
-        <rect width="124" height="74" rx="16" fill="#17213A" stroke="#334155"/><text x="62" y="31" text-anchor="middle" font-size="13" fill="#94A3B8">当前模型</text><text x="62" y="55" text-anchor="middle" font-size="20" font-weight="700" fill="#F8FAFC">Terra</text>
-        <path d="M140 37H200" stroke="#5EEAD4" stroke-width="2.5" marker-end="url(#arrow)"/>
-        <rect x="216" width="140" height="74" rx="16" fill="#10272A" stroke="#5EEAD4"/><text x="286" y="31" text-anchor="middle" font-size="13" fill="#99F6E4">建议模型</text><text x="286" y="55" text-anchor="middle" font-size="20" font-weight="700" fill="#F8FAFC">Sol</text>
-      </g>
-      <rect x="28" y="170" width="356" height="66" rx="14" fill="#0D1426" stroke="#24304A"/>
-      <rect x="46" y="186" width="6" height="34" rx="3" fill="url(#accent)"/>
-      <text x="68" y="198" font-size="14" font-weight="700" fill="#5EEAD4">模型建议：切换至 GPT-5.6 Sol</text>
-      <text x="68" y="221" font-size="13" fill="#CBD5E1">原因：本轮进入跨系统、高风险设计。</text>
+    <g transform="translate(738 62)">
+      <rect width="398" height="256" rx="20" fill="#101A2B" stroke="#31415C"/>
+      <text x="28" y="37" font-size="14" font-weight="700" letter-spacing="1.4" fill="#9AA9BD">一次请求的决策分流</text>
+      <path d="M48 93H148" stroke="#6D7CFF" stroke-width="3"/>
+      <circle cx="170" cy="93" r="22" fill="#17233A" stroke="#69E7D0" stroke-width="2"/>
+      <path d="M160 84l18 9-18 9z" fill="#69E7D0"/>
+      <path d="M192 93H350" stroke="#69E7D0" stroke-width="3"/>
+      <path d="M170 115V180H350" stroke="#6D7CFF" stroke-width="3" fill="none"/>
+      <rect x="28" y="69" width="118" height="48" rx="12" fill="#17233A"/>
+      <text x="87" y="98" text-anchor="middle" font-size="16" font-weight="700" fill="#F8FAFC">真实请求</text>
+      <rect x="260" y="69" width="112" height="48" rx="12" fill="#143238" stroke="#2D8578"/>
+      <text x="316" y="98" text-anchor="middle" font-size="16" font-weight="700" fill="#B9F7EA">直接执行</text>
+      <rect x="260" y="156" width="112" height="48" rx="12" fill="#24213A" stroke="#6D7CFF"/>
+      <text x="316" y="185" text-anchor="middle" font-size="16" font-weight="700" fill="#DFE3FF">展示建议</text>
+      <text x="48" y="232" font-size="15" fill="#9AA9BD">合适：继续任务　·　值得切换：由你决定</text>
     </g>
   </g>
 </svg>

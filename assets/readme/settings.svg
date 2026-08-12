@@ -1,23 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
-  <title id="title">模型哨兵设置界面</title>
-  <desc id="desc">同一页面展示全局默认与当前任务设置，包括自动启用、固定每轮评估、状态标识、暂停和任务覆盖。</desc>
-  <rect width="1200" height="760" rx="26" fill="#111827"/><rect x="1" y="1" width="1198" height="758" rx="25" fill="none" stroke="#334155"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">模型哨兵设置结构</title>
+  <desc id="desc">模型哨兵的设置分为全局默认和当前任务两层：默认关闭自动启用，当前任务可以启用、关闭或暂停；运行反馈不改变模型判断流程。</desc>
+  <rect width="1200" height="560" rx="26" fill="#101827"/>
+  <rect x="1" y="1" width="1198" height="558" rx="25" fill="none" stroke="#34435B"/>
   <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif">
-    <g transform="translate(54 38)"><rect width="1092" height="684" rx="22" fill="#1F2937" stroke="#475569"/><text x="30" y="45" font-size="25" font-weight="760" fill="#F8FAFC">模型哨兵</text><text x="30" y="72" font-size="14" fill="#94A3B8">启用后每轮先判断，只在需要切换时提示。</text><circle cx="1040" cy="43" r="7" fill="#37B878"/>
-      <g transform="translate(30 100)"><rect width="1032" height="246" rx="16" fill="#111827" stroke="#374151"/><text x="0" y="-18" font-size="11" font-weight="800" letter-spacing="2" fill="#7486FF">01</text><text x="30" y="-18" font-size="18" font-weight="700" fill="#F8FAFC">全局默认</text>
-        <line x1="0" y1="62" x2="1032" y2="62" stroke="#374151"/><line x1="0" y1="123" x2="1032" y2="123" stroke="#374151"/><line x1="0" y1="184" x2="1032" y2="184" stroke="#374151"/>
-        <text x="18" y="36" font-size="14" font-weight="700" fill="#F8FAFC">新任务自动启用</text><text x="18" y="55" font-size="12" fill="#94A3B8">默认关闭</text><rect x="950" y="18" width="50" height="28" rx="14" fill="#374151"/><circle cx="965" cy="32" r="10" fill="#FFFFFF"/>
-        <text x="18" y="97" font-size="14" font-weight="700" fill="#F8FAFC">评估频率</text><rect x="690" y="76" width="310" height="36" rx="9" fill="#1F2937" stroke="#64748B"/><text x="706" y="99" font-size="13" fill="#F8FAFC">启用后固定每轮评估</text>
-        <text x="18" y="158" font-size="14" font-weight="700" fill="#F8FAFC">提示策略</text><rect x="690" y="137" width="310" height="36" rx="9" fill="#1F2937" stroke="#64748B"/><text x="706" y="160" font-size="13" fill="#F8FAFC">stay 静默 · change 提示</text>
-        <text x="18" y="219" font-size="14" font-weight="700" fill="#F8FAFC">显示状态标识</text><text x="18" y="238" font-size="12" fill="#94A3B8">普通回复末尾显示 🛰️</text><rect x="950" y="201" width="50" height="28" rx="14" fill="#5168FF"/><circle cx="985" cy="215" r="10" fill="#FFFFFF"/>
+    <text x="58" y="62" font-size="36" font-weight="780" fill="#F8FAFC">设置只管理开关，不替你做模型选择</text>
+    <text x="58" y="94" font-size="18" fill="#9AA9BD">默认按任务关闭；需要时开启当前对话，不需要时暂停或关闭。</text>
+    <g transform="translate(58 137)">
+      <rect width="520" height="326" rx="20" fill="#172235" stroke="#364862"/>
+      <text x="28" y="43" font-size="14" font-weight="750" letter-spacing="1.5" fill="#69E7D0">全局默认</text>
+      <text x="28" y="81" font-size="24" font-weight="780" fill="#F8FAFC">控制新任务的起点</text>
+      <g transform="translate(28 113)">
+        <rect width="464" height="76" rx="14" fill="#101827" stroke="#2E3E57"/>
+        <text x="20" y="32" font-size="17" font-weight="700" fill="#F8FAFC">新任务自动启用</text>
+        <text x="20" y="57" font-size="15" fill="#9AA9BD">默认关闭；开启后首条真实请求开始判断</text>
+        <rect x="402" y="23" width="40" height="22" rx="11" fill="#334155"/><circle cx="413" cy="34" r="8" fill="#E8EEF6"/>
       </g>
-      <g transform="translate(30 400)"><rect width="1032" height="188" rx="16" fill="#111827" stroke="#374151"/><text x="0" y="-18" font-size="11" font-weight="800" letter-spacing="2" fill="#7486FF">02</text><text x="30" y="-18" font-size="18" font-weight="700" fill="#F8FAFC">当前任务</text>
-        <line x1="0" y1="62" x2="1032" y2="62" stroke="#374151"/><line x1="0" y1="123" x2="1032" y2="123" stroke="#374151"/>
-        <text x="18" y="36" font-size="14" font-weight="700" fill="#F8FAFC">当前任务启用</text><text x="18" y="55" font-size="12" fill="#94A3B8">只影响当前对话</text><rect x="950" y="18" width="50" height="28" rx="14" fill="#5168FF"/><circle cx="985" cy="32" r="10" fill="#FFFFFF"/>
-        <text x="18" y="97" font-size="14" font-weight="700" fill="#F8FAFC">暂停哨兵评估</text><text x="18" y="116" font-size="12" fill="#94A3B8">主任务仍然正常进行</text><rect x="950" y="79" width="50" height="28" rx="14" fill="#374151"/><circle cx="965" cy="93" r="10" fill="#FFFFFF"/>
-        <text x="18" y="158" font-size="14" font-weight="700" fill="#F8FAFC">任务配置</text><rect x="690" y="137" width="310" height="36" rx="9" fill="#1F2937" stroke="#64748B"/><text x="706" y="160" font-size="13" fill="#F8FAFC">跟随全局</text>
+      <g transform="translate(28 207)">
+        <rect width="464" height="76" rx="14" fill="#101827" stroke="#2E3E57"/>
+        <text x="20" y="32" font-size="17" font-weight="700" fill="#F8FAFC">运行反馈</text>
+        <text x="20" y="57" font-size="15" fill="#9AA9BD">可选；只影响提示，不改变判断与续跑</text>
       </g>
-      <text x="30" y="632" font-size="13" fill="#94A3B8">当前任务可启用、暂停，并单独覆盖运行标识。</text><rect x="916" y="614" width="146" height="42" rx="11" fill="#5168FF"/><text x="989" y="641" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">保存设置</text>
     </g>
+    <g transform="translate(622 137)">
+      <rect width="520" height="326" rx="20" fill="#172235" stroke="#364862"/>
+      <text x="28" y="43" font-size="14" font-weight="750" letter-spacing="1.5" fill="#8E9BFF">当前任务</text>
+      <text x="28" y="81" font-size="24" font-weight="780" fill="#F8FAFC">只作用于正在对话的任务</text>
+      <g transform="translate(28 113)">
+        <rect width="464" height="76" rx="14" fill="#101827" stroke="#2E3E57"/>
+        <text x="20" y="32" font-size="17" font-weight="700" fill="#F8FAFC">启用 / 关闭</text>
+        <text x="20" y="57" font-size="15" fill="#9AA9BD">决定该任务是否进入模型建议流程</text>
+        <rect x="402" y="23" width="40" height="22" rx="11" fill="#6D7CFF"/><circle cx="431" cy="34" r="8" fill="#FFFFFF"/>
+      </g>
+      <g transform="translate(28 207)">
+        <rect width="464" height="76" rx="14" fill="#101827" stroke="#2E3E57"/>
+        <text x="20" y="32" font-size="17" font-weight="700" fill="#F8FAFC">暂停判断</text>
+        <text x="20" y="57" font-size="15" fill="#9AA9BD">暂停期间主任务照常执行，不进行建议</text>
+      </g>
+    </g>
+    <text x="58" y="516" font-size="16" fill="#9AA9BD">设置页需要精确任务 ID 才会修改当前任务；缺失时只允许保存全局默认，避免多任务串写。</text>
   </g>
 </svg>
