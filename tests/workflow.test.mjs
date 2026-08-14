@@ -48,6 +48,14 @@ function createMcpClient(dataDir, envPatch = {}) {
       newline = buffer.indexOf("\n");
     }
   });
+  const failPending = (error) => {
+    for (const rejectPromise of pending.values()) rejectPromise(error);
+    pending.clear();
+  };
+  child.on("error", (error) => failPending(new Error(`MCP process error: ${error.message}`)));
+  child.on("close", (code, signal) => {
+    if (pending.size > 0) failPending(new Error(`MCP process closed before response (code=${code}, signal=${signal ?? "none"})`));
+  });
   return {
     child,
     request(method, params) {
@@ -58,7 +66,18 @@ function createMcpClient(dataDir, envPatch = {}) {
           clearTimeout(timeout);
           resolvePromise(message);
         });
-        child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: requestId, method, params })}\n`);
+        if (child.stdin.destroyed || !child.stdin.writable) {
+          clearTimeout(timeout);
+          pending.delete(requestId);
+          reject(new Error(`MCP process stdin is unavailable for ${method}`));
+          return;
+        }
+        child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: requestId, method, params })}\n`, (error) => {
+          if (!error) return;
+          clearTimeout(timeout);
+          pending.delete(requestId);
+          reject(new Error(`MCP request write failed for ${method}: ${error.message}`));
+        });
       });
     }
   };
