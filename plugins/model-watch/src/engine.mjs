@@ -32,6 +32,9 @@ export function normalizeEngineResult(value, availableModels = [], currentModel 
         ? parsed.rationale.trim().slice(0, 600)
         : "当前信息不足以形成可靠的切换建议",
       evaluator: typeof parsed.evaluator === "string" ? parsed.evaluator.slice(0, 80) : "unknown",
+      confidence: normalizeConfidence(parsed.confidence),
+      signals: normalizeEvidence(parsed.signals, 6, 160),
+      decisionBasis: normalizeEvidence(parsed.decisionBasis, 4, 240),
       engineVersion: ENGINE_VERSION,
       createdAt: new Date().toISOString()
     };
@@ -43,9 +46,24 @@ export function normalizeEngineResult(value, availableModels = [], currentModel 
       ? parsed.rationale.trim().slice(0, 600)
       : "当前信息不足以形成可靠的切换建议",
     evaluator: typeof parsed.evaluator === "string" ? parsed.evaluator.slice(0, 80) : "unknown",
+    confidence: normalizeConfidence(parsed.confidence),
+    signals: normalizeEvidence(parsed.signals, 6, 160),
+    decisionBasis: normalizeEvidence(parsed.decisionBasis, 4, 240),
     engineVersion: ENGINE_VERSION,
     createdAt: new Date().toISOString()
   };
+}
+
+function normalizeConfidence(value) {
+  return ["low", "medium", "high"].includes(value) ? value : null;
+}
+
+function normalizeEvidence(values, limit, maxLength) {
+  if (!Array.isArray(values)) return [];
+  return [...new Set(values
+    .filter((value) => typeof value === "string" && value.trim())
+    .map((value) => value.trim().slice(0, maxLength))
+  )].slice(0, limit);
 }
 
 export function failedResult(rationale, evaluator = "failed") {

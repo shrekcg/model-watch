@@ -8,7 +8,7 @@
     :root { color-scheme:light dark; font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; --accent:#5168ff; --ok:#37b878; --pause:#e39a35; --muted:color-mix(in srgb,CanvasText 62%,transparent); --line:color-mix(in srgb,CanvasText 12%,transparent); --panel:color-mix(in srgb,CanvasText 4%,transparent); }
     * { box-sizing:border-box; }
     body { margin:0; background:transparent; color:CanvasText; }
-    button,select { font:inherit; }
+    button,select,input { font:inherit; }
     .card { max-width:720px; padding:18px 20px; border:1px solid color-mix(in srgb,CanvasText 14%,transparent); border-radius:18px; background:Canvas; }
     .header { display:flex; justify-content:space-between; gap:16px; margin-bottom:15px; }
     h1 { margin:0; font-size:20px; letter-spacing:-.02em; }
@@ -38,6 +38,7 @@
     label strong { display:block; font-size:12px; font-weight:680; line-height:1.3; }
     label span { display:block; margin-top:3px; color:var(--muted); font-size:10.5px; line-height:1.35; }
     select { width:100%; min-height:32px; padding:6px 9px; border:1px solid color-mix(in srgb,CanvasText 19%,transparent); border-radius:8px; background:Canvas; color:inherit; font-size:12px; }
+    input[type="number"] { width:100%; min-height:32px; padding:6px 9px; border:1px solid color-mix(in srgb,CanvasText 19%,transparent); border-radius:8px; background:Canvas; color:inherit; font-size:12px; }
     select:focus-visible,button:focus-visible,.switch input:focus-visible ~ svg { outline:2px solid var(--accent); outline-offset:2px; }
     .switch-wrap { display:flex; justify-content:flex-end; align-items:center; }
     .switch { position:relative; display:block; width:44px; height:24px; flex:0 0 44px; }
@@ -51,15 +52,26 @@
     .switch .on rect { fill:var(--accent); stroke:var(--accent); }
     .conditional { margin-top:8px; padding:2px; border:1px dashed color-mix(in srgb,var(--accent) 34%,transparent); border-radius:10px; background:color-mix(in srgb,var(--accent) 4%,transparent); }
     .conditional[hidden] { display:none; }
+    .custom-only[hidden] { display:none; }
     .conditional-note { padding:7px 10px 4px; color:var(--muted); font-size:10.5px; line-height:1.4; }
     .actions { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:13px; }
     .assessment-summary { margin-top:10px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--muted); font-size:10.5px; line-height:1.55; }
+    .candidate-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; width:100%; }
+    .candidate-option { display:flex; align-items:center; gap:6px; min-height:26px; padding:4px 7px; border:1px solid var(--line); border-radius:7px; font-size:10.5px; line-height:1.2; cursor:pointer; }
+    .candidate-option input { width:auto; margin:0; }
+    .candidate-option span { overflow-wrap:anywhere; }
+    .percent-input { display:flex; align-items:center; gap:8px; }
+    .record-list { display:grid; gap:8px; margin-top:10px; }
+    .record { padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--panel); font-size:10.5px; line-height:1.5; }
+    .record strong { color:CanvasText; }
+    .record .muted { color:var(--muted); }
+    .record .fallback { color:#e39a35; }
     .assessment-summary strong { color:CanvasText; }
     .save { padding:8px 16px; border:0; border-radius:9px; background:var(--accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer; }
     .status { min-height:16px; color:var(--muted); font-size:11px; }
     pre { margin:0; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--panel); font-size:11px; line-height:1.8; white-space:pre-wrap; }
     .command-note { margin:8px 0 0; }
-    @media(max-width:580px){ .card{padding:15px}.row{grid-template-columns:1fr;gap:8px}.switch-wrap{justify-content:flex-start}.actions{justify-content:space-between}.live-status span:last-child{display:none} }
+    @media(max-width:580px){ .card{padding:15px}.row{grid-template-columns:1fr;gap:8px}.candidate-list{grid-template-columns:1fr}.switch-wrap{justify-content:flex-start}.actions{justify-content:space-between}.live-status span:last-child{display:none} }
   </style>
 </head>
 <body>
@@ -75,6 +87,7 @@
 
     <nav class="tabs" aria-label="设置导航">
       <button class="tab active" type="button" data-tab="settings">设置</button>
+      <button class="tab" type="button" data-tab="records">评估记录</button>
       <button class="tab" type="button" data-tab="commands">命令速查</button>
     </nav>
 
@@ -97,7 +110,20 @@
       </div>
 
       <div class="settings-block">
-        <div class="block-heading"><span class="eyebrow">02</span><h2>当前任务</h2></div>
+        <div class="block-heading"><span class="eyebrow">02</span><h2>评估器与候选策略</h2></div>
+        <p class="block-description">默认跟随主模型。选择自定义评估模型时，它只读取本轮输入；模型目录与 Codex 限额桶仅在你主动刷新时读取。</p>
+        <div class="form">
+          <div class="row"><label for="globalEvaluatorMode"><strong>评估方式</strong><span>客户端默认跟随主模型；自定义模型可让评估标准更稳定。</span></label><select id="globalEvaluatorMode"><option value="same-session">跟随主模型（默认）</option><option value="fixed-codex">自定义评估模型</option></select></div>
+          <div class="row custom-only"><label for="candidateModels"><strong>参与推荐的模型</strong><span>勾选本轮允许评估与推荐的模型；保存后列表第一项作为自定义评估模型。</span></label><div class="candidate-list" id="candidateModels"></div></div>
+          <div class="row custom-only"><label for="globalPreferGpt"><strong>GPT 原生优先</strong><span>开启时，额度充足只比较已选 GPT；达到阈值后只比较已选第三方模型。</span></label><div class="switch-wrap"><label class="switch" aria-label="GPT 原生优先"><input id="globalPreferGpt" type="checkbox"><svg class="off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="12" cy="12" r="8"/></svg><svg class="on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="32" cy="12" r="8"/></svg></label></div></div>
+          <div class="row custom-only" id="thresholdRow"><label for="externalModelThreshold"><strong>第三方模型切换阈值</strong><span>Codex 限额桶剩余不高于该值时，只从已选第三方模型推荐。可输入 10、15、20 等任意 0–100 的整数。</span></label><div class="percent-input"><input id="externalModelThreshold" type="number" min="0" max="100" step="1" inputmode="numeric"><span>%</span></div></div>
+        </div>
+        <div class="assessment-summary custom-only" id="hostCatalogSummary">宿主目录尚未刷新。</div>
+        <div class="actions custom-only" id="hostCatalogActions"><span class="status" id="hostCatalogStatus" aria-live="polite"></span><button class="save" id="refreshHostCatalog" type="button">刷新模型目录与额度</button></div>
+      </div>
+
+      <div class="settings-block">
+        <div class="block-heading"><span class="eyebrow">03</span><h2>当前任务</h2></div>
         <p class="block-description">只影响当前对话；启用后固定每轮评估，不再配置 stay 或评估器模式。</p>
         <div class="form">
           <div class="row"><label for="taskEnabled"><strong>当前任务启用</strong><span>关闭后停止当前任务的哨兵功能；全局不受影响。</span></label><div class="switch-wrap"><label class="switch" aria-label="当前任务启用"><input id="taskEnabled" type="checkbox"><svg class="off" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="12" cy="12" r="8"/></svg><svg class="on" viewBox="0 0 44 24" aria-hidden="true"><rect x="1" y="1" width="42" height="22" rx="11"/><circle cx="32" cy="12" r="8"/></svg></label></div></div>
@@ -111,6 +137,13 @@
         <div class="assessment-summary" id="assessmentSummary">尚无可展示的评估记录。</div>
       </div>
       <div class="actions"><span class="status" id="saveStatus" aria-live="polite"></span><button class="save" id="saveSettings" type="button">保存设置</button></div>
+    </section>
+
+    <section class="section" id="records">
+      <p class="flow"><strong>评估记录：</strong>仅展示当前任务最近 12 条真实评估、测试评估和实际选择。任务正文与附件不会保存或展示。</p>
+      <div class="assessment-summary" id="recordsSummary">加载中…</div>
+      <div class="record-list" id="recordsList"></div>
+      <div class="actions"><span class="status" id="recordsStatus" aria-live="polite"></span><button class="save" id="refreshRecords" type="button">刷新记录</button></div>
     </section>
 
     <section class="section" id="commands">
@@ -128,14 +161,25 @@
   <script>
     let payload=null,nextRequestId=1; const pendingRequests=new Map(); const byId=(id)=>document.getElementById(id);
     function toggle(){byId("taskOverride").hidden=byId("taskConfigMode").value!=="custom"}
-    function render(next){payload=next?.structuredContent||next||payload;if(!payload?.global)return;const g=payload.global,t=payload.task||{},o=t.override||{};byId("globalAutoEnable").checked=!!g.autoEnableNewTasks;byId("globalStatusIndicator").checked=g.showStatusIndicator!==false;byId("taskEnabled").checked=!!t.enabled;byId("taskPaused").checked=!!t.paused;byId("taskConfigMode").value=t.override?"custom":"inherit";byId("taskStatusIndicator").checked=(o.showStatusIndicator??g.showStatusIndicator)!==false;const dot=byId("taskStatusDot"),text=byId("taskStatusText");dot.className="status-dot"+(t.paused?" paused":t.enabled?" enabled":"");text.textContent=t.paused?"哨兵已暂停":t.enabled?"哨兵运行中":"当前任务未启用";const latest=t.lastAssessment,history=Array.isArray(t.assessmentHistory)?t.assessmentHistory:[],observations=Array.isArray(t.observationHistory)?t.observationHistory:[];byId("assessmentSummary").textContent=latest?`最近判断：${latest.status}${latest.recommendedModel?`，建议 ${latest.recommendedModel}`:""}。原因：${latest.rationale}。已保留 ${history.length} 条评估与 ${observations.length} 条实际选择记录；不保存任务正文或附件。`:"尚无可展示的评估记录。";toggle()}
+    function money(value){return Number.isFinite(value)?`$${Number(value).toFixed(4)}`:"—"}function stamp(value){return value?new Date(value).toLocaleString("zh-CN",{hour12:false}):"—"}function text(value){return value||"—"}function evaluatorLabel(value){return value==="fixed-codex"?"自定义评估模型":value==="same-session"?"跟随主模型":text(value)}
+    function renderRecordList(records,observations,summary,testRecords=[],testObservations=[]){const all=[...records.map(record=>({...record,source:"live"})),...testRecords.map(record=>({...record,source:"test"}))];const allObservations=[...observations,...testObservations],byAssessment=new Map(allObservations.map(entry=>[entry.assessmentId,entry]));byId("recordsSummary").textContent=`真实评估 ${summary?.total||records.length} 条；测试评估 ${testRecords.length} 条；自定义评估 ${summary?.fixedCount||0} 条（完成 ${summary?.completedFixedCount||0} 条）；回退 ${summary?.fallbackCount||0} 条；可估算 API 等价成本合计 ${money(summary?.totalEstimatedUsd)}。同会话判断无法可靠归因费用。`;const node=byId("recordsList");if(!all.length){node.replaceChildren(Object.assign(document.createElement("p"),{className:"muted",textContent:"当前任务尚无评估记录。"}));return}node.replaceChildren(...all.slice().reverse().map((record)=>{const item=document.createElement("article");item.className="record";const fallback=record.fallback?`<div class="fallback">已回退：${evaluatorLabel(record.fallback.from)} → ${evaluatorLabel(record.fallback.to)}；${text(record.fallback.reason)}</div>`:"";const observation=byAssessment.get(record.assessmentId),actual=observation?`实际选择：${text(observation.result)}${observation.actualModel?`（${text(observation.actualModel)}）`:""}；用户操作：${text(observation.explicitDecision)}`:"实际选择：尚未观察到";item.innerHTML=`<strong>${record.source==="test"?"测试 · ":"真实 · "}${stamp(record.createdAt)} · ${text(record.status)}${record.recommendedModel?` → ${text(record.recommendedModel)}`:""}</strong><div>实际评估模型：${text(record.evaluatorModel)}；评估方式：${evaluatorLabel(record.evaluator)}；请求模型：${text(record.requestedEvaluatorModel)}；上下文：${text(record.contextCoverage)}；耗时：${record.durationMs===null||record.durationMs===undefined?"—":`${record.durationMs}ms`}</div><div>估算成本：${money(record.cost?.estimatedUsd)} <span class="muted">${text(record.cost?.note)}</span></div><div class="muted">原因：${text(record.rationale)}；信号：${(record.signals||[]).map(text).join("、")||"—"}；${actual}</div>${fallback}`;return item}));}
+    function catalogModels(catalog){const fallback=[
+      ["opencode-go/deepseek-v4-flash","DeepSeek V4 Flash","external"],["opencode-go/grok-4.6","Grok 4.6","external"],["gpt-5.6-luna","GPT-5.6 Luna","gpt"],["opencode-go/deepseek-v4-pro","DeepSeek V4 Pro","external"],["opencode-go/glm-5.2","GLM 5.2","external"],["opencode-go/kimi-k2.7-code","Kimi K2.7 Code","external"],["opencode-go/kimi-k3","Kimi K3","external"],["opencode-go/minimax-m3","MiniMax M3","external"],["opencode-go/qwen3.8-max","Qwen 3.8 Max","external"],["gpt-5.6-sol","GPT-5.6 Sol","gpt"],["gpt-5.6-terra","GPT-5.6 Terra","gpt"]
+    ].map(([id,displayName,provider])=>({id,displayName,provider}));const models=Array.isArray(catalog?.models)&&catalog.models.length?catalog.models:fallback;return [...models].sort((left,right)=>(left.provider==="gpt"?0:1)-(right.provider==="gpt"?0:1))}
+    function renderCatalog(catalog){const models=catalogModels(catalog),remaining=catalog?.rateLimit?.remainingPercent,at=catalog?.fetchedAt;byId("hostCatalogSummary").textContent=!at?"本地预览：显示最近验证的 11 个模型；从 Codex 插件卡片刷新可获取最新目录。":`已于 ${stamp(at)} 刷新 ${models.length} 个可选模型；Codex 限额桶剩余 ${Number.isFinite(remaining)?`${remaining}%`:"未知"}。${Date.now()-Date.parse(at)>3600000?"快照已过期，已安全回退到内置 GPT 候选。":"快照有效期内。"}`;}
+    function renderModelChoices(catalog,config){const models=catalogModels(catalog),chosen=Array.isArray(config.candidateModels)&&config.candidateModels.length?new Set(config.candidateModels):new Set(models.map(model=>model.id));byId("candidateModels").replaceChildren(...models.map(model=>{const input=Object.assign(document.createElement("input"),{type:"checkbox",value:model.id,checked:chosen.has(model.id)});input.dataset.candidateModel="true";const label=document.createElement("label");label.className="candidate-option";label.append(input,Object.assign(document.createElement("span"),{textContent:model.displayName||model.id}));return label}));}
+    function syncEvaluatorControls(){const custom=byId("globalEvaluatorMode").value==="fixed-codex";document.querySelectorAll(".custom-only").forEach(node=>{node.hidden=!custom});byId("thresholdRow").hidden=!custom||!byId("globalPreferGpt").checked}
+    function render(next){payload=next?.structuredContent||next||payload;if(!payload?.global)return;const g=payload.global,t=payload.task||{},o=t.override||{};byId("globalAutoEnable").checked=!!g.autoEnableNewTasks;byId("globalStatusIndicator").checked=g.showStatusIndicator!==false;byId("globalEvaluatorMode").value=g.evaluatorMode||"same-session";byId("globalPreferGpt").checked=g.preferGpt!==false;byId("externalModelThreshold").value=String(g.externalModelThreshold??30);renderCatalog(g.hostCatalog);renderModelChoices(g.hostCatalog,g);syncEvaluatorControls();byId("taskEnabled").checked=!!t.enabled;byId("taskPaused").checked=!!t.paused;byId("taskConfigMode").value=t.override?"custom":"inherit";byId("taskStatusIndicator").checked=(o.showStatusIndicator??g.showStatusIndicator)!==false;const dot=byId("taskStatusDot"),statusText=byId("taskStatusText");dot.className="status-dot"+(t.paused?" paused":t.enabled?" enabled":"");statusText.textContent=t.paused?"哨兵已暂停":t.enabled?"哨兵运行中":"当前任务未启用";const latest=t.lastAssessment,history=Array.isArray(t.assessmentHistory)?t.assessmentHistory:[],tests=Array.isArray(t.testHistory)?t.testHistory:[],observations=Array.isArray(t.observationHistory)?t.observationHistory:[],testObservations=Array.isArray(t.testObservationHistory)?t.testObservationHistory:[];byId("assessmentSummary").textContent=latest?`最近判断：${latest.status}${latest.recommendedModel?`，建议 ${latest.recommendedModel}`:""}。实际评估器：${latest.evaluatorModel||latest.evaluator}；请求评估器：${latest.requestedEvaluatorModel||"—"}；上下文：${latest.contextCoverage||"same-session"}。${latest.fallback?`自定义评估未完成，已回退同会话：${latest.fallback.reason}。`:""}已保留 ${history.length} 条真实评估、${tests.length} 条测试评估与 ${observations.length} 条实际选择记录；不保存任务正文或附件。`:"尚无可展示的评估记录。";renderRecordList(history,observations,{total:history.length,fixedCount:history.filter(x=>x.evaluatorMode==="fixed-codex").length,completedFixedCount:history.filter(x=>x.evaluatorMode==="fixed-codex"&&x.status!=="failed").length,fallbackCount:history.filter(x=>x.fallback).length,totalEstimatedUsd:history.reduce((s,x)=>s+(x.cost?.estimatedUsd||0),0)},tests,testObservations);toggle()}
     async function callTool(name,args){if(window.openai?.callTool)return window.openai.callTool(name,args);const id=nextRequestId++;window.parent.postMessage({jsonrpc:"2.0",id,method:"tools/call",params:{name,arguments:args}},"*");return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{pendingRequests.delete(id);reject(new Error("工具调用超时"))},10000);pendingRequests.set(id,{resolve(v){clearTimeout(timeout);resolve(v)},reject(e){clearTimeout(timeout);reject(e)}})})}
     document.querySelectorAll(".tab").forEach((button)=>button.addEventListener("click",()=>{document.querySelectorAll(".tab,.section").forEach((node)=>node.classList.remove("active"));button.classList.add("active");byId(button.dataset.tab).classList.add("active")}));
     byId("taskConfigMode").addEventListener("change",toggle);
-    byId("saveSettings").addEventListener("click",async()=>{const status=byId("saveStatus"),sessionId=payload?.sessionId;status.textContent="保存中…";try{await callTool("model_watch_update_settings",{scope:"global",sessionId,patch:{autoEnableNewTasks:byId("globalAutoEnable").checked,showStatusIndicator:byId("globalStatusIndicator").checked}});if(sessionId){const custom=byId("taskConfigMode").value==="custom";await callTool("model_watch_update_settings",{scope:"task",sessionId,patch:{enabled:byId("taskEnabled").checked,paused:byId("taskPaused").checked,override:custom?{showStatusIndicator:byId("taskStatusIndicator").checked}:null}});render(await callTool("model_watch_get_status",{sessionId}));status.textContent="已保存"}else{render(await callTool("model_watch_open_settings",{}));status.textContent="已保存全局设置；请在具体任务中设置任务开关"}}catch{status.textContent="保存失败，请重试"}});
+    byId("globalEvaluatorMode").addEventListener("change",syncEvaluatorControls);byId("globalPreferGpt").addEventListener("change",syncEvaluatorControls);
+    byId("saveSettings").addEventListener("click",async()=>{const status=byId("saveStatus"),sessionId=payload?.sessionId,candidateModels=[...document.querySelectorAll("[data-candidate-model]:checked")].map(input=>input.value),threshold=Number(byId("externalModelThreshold").value);if(!window.openai?.callTool){status.textContent="当前是本地预览，请从 Codex 插件设置卡片保存";return}status.textContent="保存中…";try{if(!candidateModels.length)throw new Error("请至少勾选一个参与推荐的模型");if(!Number.isInteger(threshold)||threshold<0||threshold>100)throw new Error("阈值请输入 0–100 的整数");await callTool("model_watch_update_settings",{scope:"global",sessionId,patch:{autoEnableNewTasks:byId("globalAutoEnable").checked,showStatusIndicator:byId("globalStatusIndicator").checked,evaluatorMode:byId("globalEvaluatorMode").value,evaluatorModel:byId("globalEvaluatorMode").value==="fixed-codex"?candidateModels[0]:payload?.global?.evaluatorModel||"gpt-5.6-terra",candidateModels,preferGpt:byId("globalPreferGpt").checked,externalModelThreshold:threshold}});if(sessionId){const custom=byId("taskConfigMode").value==="custom";await callTool("model_watch_update_settings",{scope:"task",sessionId,patch:{enabled:byId("taskEnabled").checked,paused:byId("taskPaused").checked,override:custom?{showStatusIndicator:byId("taskStatusIndicator").checked}:null}});render(await callTool("model_watch_get_status",{sessionId}));status.textContent="已保存"}else{render(await callTool("model_watch_open_settings",{}));status.textContent="已保存全局设置；请在具体任务中设置任务开关"}}catch(error){status.textContent=error instanceof Error?error.message:"保存失败，请重试"}});
+    byId("refreshHostCatalog").addEventListener("click",async()=>{const status=byId("hostCatalogStatus"),button=byId("refreshHostCatalog");if(!window.openai?.callTool){status.textContent="当前是本地预览，请从 Codex 插件设置卡片刷新";return}status.textContent="正在读取本机模型目录与额度…";button.disabled=true;try{const result=await callTool("model_watch_refresh_host_catalog",{});const data=result?.structuredContent||result;if(!data?.global)throw new Error("目录刷新未返回有效结果");render(data);status.textContent="目录与额度已刷新"}catch(error){status.textContent=error instanceof Error?`刷新失败：${error.message}`:"刷新失败；已保持原有目录快照"}finally{button.disabled=false}});
+    byId("refreshRecords").addEventListener("click",async()=>{if(!payload?.sessionId){byId("recordsStatus").textContent="当前没有任务记录";return}byId("recordsStatus").textContent="刷新中…";try{const result=await callTool("model_watch_get_assessment_records",{sessionId:payload.sessionId});const data=result?.structuredContent||result;renderRecordList(data.records||[],data.observations||[],data.summary||{},data.testRecords||[],data.testObservations||[]);byId("recordsStatus").textContent="已刷新"}catch{byId("recordsStatus").textContent="刷新失败，请重试"}});
     async function refreshStatus(){if(!payload?.sessionId||payload.sessionId==="unknown")return;try{render(await callTool("model_watch_get_status",{sessionId:payload.sessionId}))}catch{/* keep the last rendered state */}}
     window.addEventListener("message",(event)=>{if(event.source!==window.parent)return;const message=event.data;if(!message||message.jsonrpc!=="2.0")return;if(message.id!==undefined&&pendingRequests.has(message.id)){const pending=pendingRequests.get(message.id);pendingRequests.delete(message.id);if(message.error)pending.reject(message.error);else pending.resolve(message.result);return}if(message.method==="ui/notifications/tool-result")render(message.params)});
-    window.addEventListener("focus",refreshStatus);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refreshStatus()});render(window.openai?.toolOutput);
+    window.addEventListener("focus",refreshStatus);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refreshStatus()});render(window.openai?.toolOutput||{sessionId:null,global:{autoEnableNewTasks:false,showStatusIndicator:true,evaluatorMode:"same-session",evaluatorModel:"gpt-5.6-terra",candidateModels:null,preferGpt:true,externalModelThreshold:30,hostCatalog:null},task:null});
   </script>
 </body>
 </html>

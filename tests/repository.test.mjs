@@ -30,6 +30,7 @@ test("required repository files exist", () => {
     "plugins/model-watch/scripts/model-watch-mcp.mjs",
     "scripts/update-plugin.mjs",
     "plugins/model-watch/ui/settings.html"
+    ,"plugins/model-watch/ui/recommendation.html"
   ];
 
   for (const file of requiredFiles) {
@@ -80,7 +81,9 @@ test("README documents same-session evaluation and privacy boundaries", () => {
   assert.match(readme, /逻辑拦截/);
   assert.match(readme, /重新发送同一请求/);
   assert.match(readme, /不保存任务正文/);
-  assert.match(readme, /子 Agent 评估器、外部评估服务/);
+  assert.match(readme, /没有子 Agent、外部评估服务/);
+  assert.match(readme, /自定义评估模型/);
+  assert.match(readme, /确定性建议卡测试/);
   assert.match(readme, /推理深度切换/);
   assert.doesNotMatch(readme, /model-watch gate-next/);
 });
@@ -91,10 +94,13 @@ test("README documents the non-destructive plugin update path", () => {
   assert.match(readme, /codex plugin add model-watch@model-watch/);
 });
 
-test("README documents the static candidate-model boundary", () => {
+test("README documents the refreshed host-catalog and configurable candidate boundary", () => {
   assert.match(readme, /MODEL_WATCH_AVAILABLE_MODELS/);
   assert.match(readme, /gpt-5\.6-luna/);
-  assert.match(readme, /不是 Codex 宿主动态返回的模型列表/);
+  assert.match(readme, /刷新模型目录与额度/);
+  assert.match(readme, /Codex 限额桶/);
+  assert.match(readme, /代理信号/);
+  assert.match(readme, /30%/);
 });
 
 test("hook metadata and both runtime entrypoints share the plugin-root data contract", () => {

@@ -13,9 +13,9 @@ function loadBundledMcpConfig() {
   return config.mcpServers["model-watch"];
 }
 
-function createClient(dataDir) {
+function createClient(dataDir, envPatch = {}) {
   const child = spawn(process.execPath, [serverPath], {
-    env: { ...process.env, MODEL_WATCH_DATA_DIR: dataDir },
+    env: { ...process.env, ...envPatch, MODEL_WATCH_DATA_DIR: dataDir },
     stdio: ["pipe", "pipe", "pipe"]
   });
   let buffer = "";
@@ -102,9 +102,16 @@ test("MCP server exposes settings UI and persists task configuration", async () 
 
     const listed = await client.request("tools/list");
     const settingsTool = listed.result.tools.find((tool) => tool.name === "model_watch_open_settings");
-    assert.equal(settingsTool._meta.ui.resourceUri, "ui://model-watch/settings-v5.html");
+    assert.equal(settingsTool._meta.ui.resourceUri, "ui://model-watch/settings-v8.html");
+    const recommendationTool = listed.result.tools.find((tool) => tool.name === "model_watch_present_recommendation");
+    assert.equal(recommendationTool._meta.ui.resourceUri, "ui://model-watch/recommendation-v1.html");
+    assert.ok(listed.result.tools.find((tool) => tool.name === "model_watch_create_test_recommendation"));
+    assert.ok(listed.result.tools.find((tool) => tool.name === "model_watch_run_fixed_evaluator"));
+    assert.ok(listed.result.tools.find((tool) => tool.name === "model_watch_get_assessment_records"));
+    assert.ok(listed.result.tools.find((tool) => tool.name === "model_watch_record_fallback_assessment"));
+    assert.ok(listed.result.tools.find((tool) => tool.name === "model_watch_refresh_host_catalog"));
 
-    const resource = await client.request("resources/read", { uri: "ui://model-watch/settings-v5.html" });
+    const resource = await client.request("resources/read", { uri: "ui://model-watch/settings-v8.html" });
     assert.equal(resource.result.contents[0].mimeType, "text/html;profile=mcp-app");
     assert.match(resource.result.contents[0].text, /模型哨兵设置/);
     assert.match(resource.result.contents[0].text, /按需启用：在要监测的对话中发送 !model-watch on/);
@@ -118,14 +125,28 @@ test("MCP server exposes settings UI and persists task configuration", async () 
     assert.match(resource.result.contents[0].text, /启用后固定每轮评估/);
     assert.match(resource.result.contents[0].text, /id="taskStatusDot"/);
     assert.match(resource.result.contents[0].text, /id="assessmentSummary"/);
+    assert.match(resource.result.contents[0].text, /id="recordsList"/);
+    assert.match(resource.result.contents[0].text, /API 等价成本/);
+    assert.match(resource.result.contents[0].text, /实际选择：尚未观察到/);
     assert.match(resource.result.contents[0].text, /id="globalStatusIndicator"/);
     assert.match(resource.result.contents[0].text, /id="taskPaused"/);
-    assert.doesNotMatch(resource.result.contents[0].text, /globalEvaluatorMode/);
-    assert.doesNotMatch(resource.result.contents[0].text, /内部子 Agent/);
-    assert.doesNotMatch(resource.result.contents[0].text, /外部 API/);
+    assert.match(resource.result.contents[0].text, /id="globalEvaluatorMode"/);
+    assert.match(resource.result.contents[0].text, /自定义评估模型/);
+    assert.match(resource.result.contents[0].text, /参与推荐的模型/);
+    assert.match(resource.result.contents[0].text, /id="globalPreferGpt"/);
+    assert.match(resource.result.contents[0].text, /id="externalModelThreshold"/);
+    assert.match(resource.result.contents[0].text, /id="refreshHostCatalog"/);
+    assert.match(resource.result.contents[0].text, /Codex 限额桶/);
+    assert.doesNotMatch(resource.result.contents[0].text, /查看测试指令/);
     assert.doesNotMatch(resource.result.contents[0].text, /推理深度/);
     assert.doesNotMatch(resource.result.contents[0].text, /gate-next/);
     assert.match(resource.result.contents[0].text, /id="saveSettings"/);
+
+    const recommendation = await client.request("resources/read", { uri: "ui://model-watch/recommendation-v1.html" });
+    assert.match(recommendation.result.contents[0].text, /已选择模型，继续任务/);
+    assert.match(recommendation.result.contents[0].text, /忽略建议，继续任务/);
+    assert.match(recommendation.result.contents[0].text, /sendFollowUpMessage/);
+    assert.doesNotMatch(recommendation.result.contents[0].text, /method:"ui\/message"/);
 
     const updated = await client.request("tools/call", {
       name: "model_watch_update_settings",
@@ -142,13 +163,17 @@ test("MCP server exposes settings UI and persists task configuration", async () 
       arguments: {
         scope: "global",
         patch: {
-          evaluatorMode: "internal-agent",
-          showStatusIndicator: false
+          evaluatorMode: "fixed-codex",
+          evaluatorModel: "gpt-5.6-sol",
+          showStatusIndicator: false,
+          externalModelThreshold: 50
         }
       }
     });
-    assert.equal("evaluatorMode" in globalUpdated.result.structuredContent.global, false);
+    assert.equal(globalUpdated.result.structuredContent.global.evaluatorMode, "fixed-codex");
+    assert.equal(globalUpdated.result.structuredContent.global.evaluatorModel, "gpt-5.6-sol");
     assert.equal(globalUpdated.result.structuredContent.global.showStatusIndicator, false);
+    assert.equal(globalUpdated.result.structuredContent.global.externalModelThreshold, 50);
     assert.deepEqual(updated.result.structuredContent.availableModels, ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]);
 
     const openedWithoutSession = await client.request("tools/call", {
@@ -164,6 +189,39 @@ test("MCP server exposes settings UI and persists task configuration", async () 
     });
     assert.equal(openedWithUnknownSession.result.structuredContent.sessionId, null);
     assert.equal(openedWithUnknownSession.result.structuredContent.task, null);
+  } finally {
+    client.child.kill();
+    rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("MCP refreshes a supplied host catalog and applies the saved threshold", async () => {
+  const dataDir = mkdtempSync(join(tmpdir(), "model-watch-catalog-"));
+  const fixture = JSON.stringify({
+    models: [
+      { id: "gpt-5.6-luna", displayName: "GPT Luna", inputModalities: ["text", "image"] },
+      { id: "opencode-go/deepseek-v4-pro", displayName: "DeepSeek V4 Pro", inputModalities: ["text", "image"] }
+    ],
+    rateLimits: { limitId: "codex", primary: { usedPercent: 65, windowDurationMins: 10080 } }
+  });
+  const client = createClient(dataDir, { MODEL_WATCH_HOST_CATALOG_JSON: fixture });
+  try {
+    await client.request("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } });
+    const refreshed = await client.request("tools/call", { name: "model_watch_refresh_host_catalog", arguments: {} });
+    assert.equal(refreshed.result.structuredContent.hostCatalog.models.length, 2);
+    assert.equal(refreshed.result.structuredContent.hostCatalog.rateLimit.remainingPercent, 35);
+    assert.deepEqual(refreshed.result.structuredContent.availableModels, ["gpt-5.6-luna"]);
+    const opened = await client.request("tools/call", { name: "model_watch_update_settings", arguments: {
+      scope: "global", patch: {
+        evaluatorMode: "fixed-codex",
+        evaluatorModel: "opencode-go/deepseek-v4-pro",
+        candidateModels: ["gpt-5.6-luna", "opencode-go/deepseek-v4-pro"],
+        externalModelThreshold: 40
+      }
+    } });
+    assert.deepEqual(opened.result.structuredContent.availableModels, ["opencode-go/deepseek-v4-pro"]);
+    assert.equal(opened.result.structuredContent.global.evaluatorModel, "opencode-go/deepseek-v4-pro");
+    assert.deepEqual(opened.result.structuredContent.global.candidateModels, ["gpt-5.6-luna", "opencode-go/deepseek-v4-pro"]);
   } finally {
     client.child.kill();
     rmSync(dataDir, { recursive: true, force: true });

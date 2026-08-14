@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { createRouteTicket, loadTaskState, saveTaskState, taskStateExists } from "../plugins/model-watch/src/state.mjs";
+import { armRouteTicket } from "../plugins/model-watch/src/state.mjs";
 import { hashPrompt } from "../plugins/model-watch/src/engine.mjs";
 
 const hookPath = resolve(import.meta.dirname, "../plugins/model-watch/scripts/model-watch-hook.mjs");
@@ -47,7 +48,9 @@ test("existing task enables the generic pre-task engine", () => withDataDir((dat
   assert.match(output.hookSpecificOutput.additionalContext, /available_models: gpt-5\.6-luna, gpt-5\.6-terra, gpt-5\.6-sol/);
   assert.match(output.hookSpecificOutput.additionalContext, /日常沟通/);
   assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /推理深度/);
-  assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /reminder_timing|evaluator_mode/);
+  assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /reminder_timing/);
+  assert.match(output.hookSpecificOutput.additionalContext, /evaluator_mode: same-session/);
+  assert.match(output.hookSpecificOutput.additionalContext, /最低充分模型/);
 }));
 
 test("disabled ordinary task exits without state", () => withDataDir((dataDir) => {
@@ -170,6 +173,60 @@ test("an expired recommendation is observed instead of silently disappearing", (
   assert.equal(after.routeTicket, null);
   assert.equal(after.observationHistory.at(-1).result, "expired");
   assert.equal(after.observationHistory.at(-1).assessmentId, "assessment-expired");
+}));
+
+test("a valid card resume envelope consumes the gate once and records the real model", () => withDataDir((dataDir) => {
+  const task = loadTaskState("card-resume", dataDir);
+  task.enabled = true;
+  const ticket = createRouteTicket({
+    turnId: "origin-turn",
+    promptHash: hashPrompt("上一条暂停的任务"),
+    originalModel: "gpt-5.6-luna"
+  }, "gpt-5.6-sol", Date.now(), "assessment-card");
+  task.routeTicket = armRouteTicket(ticket, {
+    gateId: ticket.gateId,
+    decision: "acknowledged",
+    idempotencyKey: "card-click"
+  });
+  saveTaskState("card-resume", task, dataDir);
+  const prompt = `[MODEL_WATCH_RESUME gate=${ticket.gateId} nonce=${task.routeTicket.resumeNonce}]`;
+  const output = runHook(dataDir, promptInput("card-resume", prompt, "gpt-5.6-sol"));
+  assert.match(output.hookSpecificOutput.additionalContext, /卡片继续上一条被暂停的任务/);
+  const after = loadTaskState("card-resume", dataDir);
+  assert.equal(after.routeTicket, null);
+  assert.equal(after.observationHistory.at(-1).result, "adopted");
+  assert.equal(after.observationHistory.at(-1).explicitDecision, "acknowledged");
+
+  const replay = runHook(dataDir, promptInput("card-resume", prompt, "gpt-5.6-sol"));
+  assert.doesNotMatch(replay.hookSpecificOutput.additionalContext, /MODEL_WATCH_ROUTE/);
+  assert.match(replay.hookSpecificOutput.additionalContext, /MODEL_WATCH_RESUME_REJECTED/);
+  assert.match(replay.hookSpecificOutput.additionalContext, /不要再次评估模型/);
+  assert.equal(loadTaskState("card-resume", dataDir).activeRequest.promptHash, after.activeRequest.promptHash);
+}));
+
+test("an invalid card envelope does not cancel a live gate", () => withDataDir((dataDir) => {
+  const task = loadTaskState("wrong-card", dataDir);
+  task.enabled = true;
+  const ticket = createRouteTicket({
+    turnId: "origin-turn",
+    promptHash: hashPrompt("原任务"),
+    originalModel: "gpt-5.6-luna"
+  }, "gpt-5.6-sol", Date.now(), "assessment-live");
+  task.routeTicket = armRouteTicket(ticket, {
+    gateId: ticket.gateId,
+    decision: "ignored",
+    idempotencyKey: "live-click"
+  });
+  saveTaskState("wrong-card", task, dataDir);
+  const output = runHook(dataDir, promptInput(
+    "wrong-card",
+    `[MODEL_WATCH_RESUME gate=${ticket.gateId} nonce=wrong-nonce]`,
+    "gpt-5.6-luna"
+  ));
+  assert.match(output.hookSpecificOutput.additionalContext, /MODEL_WATCH_RESUME_REJECTED/);
+  const after = loadTaskState("wrong-card", dataDir);
+  assert.equal(after.routeTicket.gateId, ticket.gateId);
+  assert.equal(after.observationHistory.length, 0);
 }));
 
 test("removed command is handled without running the recommendation engine", () => withDataDir((dataDir) => {

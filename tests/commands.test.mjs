@@ -9,6 +9,8 @@ test("parses enable and lifecycle commands", () => {
   assert.equal(parseModelWatchCommand("$model-watch pause（暂停哨兵评估）").action, "pause");
   assert.equal(parseModelWatchCommand("$model-watch resume").action, "resume");
   assert.equal(parseModelWatchCommand("$model-watch off").action, "off");
+  assert.equal(parseModelWatchCommand("!model-watch test-card").action, "test-card");
+  assert.deepEqual(parseModelWatchCommand("!model-watch test downgrade"), { action: "test", argument: null, remainder: "downgrade" });
 });
 
 test("parses inline check and preserves the task", () => {

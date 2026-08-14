@@ -15,7 +15,9 @@ export function parseModelWatchCommand(prompt) {
     "status",
     "settings",
     "check",
-    "check-inline"
+    "check-inline",
+    "test-card",
+    "test"
   ]);
   if (!validActions.has(action)) return { action: "unknown", argument: rawAction, remainder: "" };
   return { action, argument: null, remainder: text.slice(match[0].length).trim() };

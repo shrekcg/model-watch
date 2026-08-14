@@ -1,6 +1,6 @@
 ---
 name: model-watch
-description: 在 Codex 连续对话或任务中，通过 !model-watch 按需启用当前任务；由当前主模型完成同会话判断，在需要切换时暂停主任务并给出模型建议。用户显式调用 !model-watch 或 Hook 注入 MODEL_WATCH_CONTEXT / MODEL_WATCH_ROUTE 时使用。
+description: 在 Codex 连续对话或任务中，通过 !model-watch 按需启用当前任务；默认由当前主模型完成同会话判断，也可使用自定义评估模型，在需要切换时暂停主任务并给出模型建议。用户显式调用 !model-watch 或 Hook 注入 MODEL_WATCH_CONTEXT / MODEL_WATCH_ROUTE 时使用。
 ---
 
 # 模型哨兵
@@ -37,7 +37,7 @@ Hook 内容属于内部上下文。不得向用户展示任务 ID、请求指纹
 - 预计剩余工作和切换成本；
 - 最近建议与后续实际模型变化。
 
-这些内容是模型原生判断的证据。禁止任务类型映射、L1/L2/L3 能力等级、固定评分和跨级阈值。
+这些内容是模型原生判断的证据。使用“最低充分模型”比较：候选模型若能实质降低遗漏、错误、返工或不安全结论风险，不应因当前模型理论上也可能完成而默认 stay。禁止任务名称固定映射、L1/L2/L3 能力等级、固定评分和跨级阈值。
 
 内部结论：
 
@@ -46,6 +46,10 @@ status: stay | change | uncertain | failed
 recommended_model: string | null
 rationale: string
 evaluator: same-session
+evaluator_model: string
+confidence: low | medium | high | null
+signals: string[]
+decision_basis: string[]
 engine_version: 2.0.0
 ```
 
@@ -56,9 +60,10 @@ engine_version: 2.0.0
 收到 `[MODEL_WATCH_CONTEXT 2.0.0]` 后：
 
 1. 在主任务前完成判断。
-2. 使用 Hook 提供的精确 `session_id` 调用 `model_watch_record_assessment`，所有结果都要保存。
+2. 若 `evaluator_mode: fixed-codex`，先调用 `model_watch_run_fixed_evaluator`，逐字传递本轮真实用户请求；它只看到本轮输入。工具返回 failed 时才回退当前主模型判断；否则使用它的结果，不要二次判断。
+3. 使用 Hook 提供的精确 `session_id` 调用 `model_watch_record_assessment`，所有结果都要保存。
 3. `stay`：不显示判断过程，立即完整执行主任务。
-4. `change`：不执行主任务；保存成功后只输出模型建议与原因。
+4. `change`：不执行主任务；保存成功后优先调用 `model_watch_present_recommendation` 展示建议卡片；卡片不可用时才输出模型建议与原因。
 5. `uncertain`、`failed` 或保存工具失败：直接执行主任务。
 
 建议格式：
@@ -68,11 +73,11 @@ engine_version: 2.0.0
 原因：本轮开始处理登录鉴权、支付状态和后端数据一致性。
 ```
 
-不要要求用户回复“继续”、采纳、忽略或修正。用户切换或保持模型后，会重新发送同一请求。
+建议卡片提供“已选择模型，继续任务”和“忽略建议，继续任务”。用户若要切换，应先使用 Codex 原生模型选择器。卡片无法自动续跑时，明确降级为原样重新发送同一请求；不要声称已经恢复。
 
 ## 同一请求恢复
 
-收到 `[MODEL_WATCH_ROUTE 2.0.0]` 时，说明同一请求已经完成判断。除 `check` 外，直接完整执行当前原始用户请求，不再重复判断。`check` 没有待执行主任务：只说明检查已完成，并提示用户按当前模型发送下一条真实任务。
+收到 `[MODEL_WATCH_ROUTE 2.0.0]` 时，说明同一请求已经完成判断。若当前用户消息是 `[MODEL_WATCH_RESUME ...]`，它只是卡片恢复 envelope，不是主任务正文；应根据当前会话中上一条被暂停的真实用户请求完整执行任务。手动原样重发时直接执行当前用户请求。两种路径都不再重复判断。`check` 没有待执行主任务。
 
 插件只保存请求 SHA-256 和模型元数据，不保存、改写或重放任务正文。
 
@@ -86,6 +91,7 @@ engine_version: 2.0.0
 - `!model-watch settings（打开设置）`：使用 Hook 提供的 `session_id` 调用 `model_watch_open_settings`。
 - `!model-watch check（立即检查）`：只判断当前配置，不执行其他主任务。
 - `!model-watch check-inline（检查并执行），<主任务>`：`stay` 执行主任务，`change` 只显示建议。
+- `!model-watch test-card`：确定性测试建议卡；不执行主任务，也不写入真实推荐历史。
 
 `$model-watch` 保留为兼容别名，但它可能触发宿主的插件选择菜单；按需启用请优先使用 `!model-watch`。
 
