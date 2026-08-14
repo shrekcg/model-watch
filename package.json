@@ -1,11 +1,11 @@
 {
   "name": "model-watch",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "private": false,
   "description": "A pre-task model recommendation sentinel for Codex conversations and workflows.",
   "type": "module",
   "scripts": {
-    "test": "node --test",
+    "test": "for file in tests/*.test.mjs; do node --test --test-concurrency=1 \"$file\" || exit 1; done",
     "update:plugin": "node scripts/update-plugin.mjs"
   },
   "engines": {

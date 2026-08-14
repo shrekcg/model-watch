@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模型哨兵建议</title>
+  <style>
+    :root { color-scheme:light dark; font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; --accent:#5168ff; --muted:color-mix(in srgb,CanvasText 62%,transparent); --line:color-mix(in srgb,CanvasText 14%,transparent); --panel:color-mix(in srgb,CanvasText 5%,transparent); }
+    * { box-sizing:border-box; }
+    body { margin:0; background:transparent; color:CanvasText; }
+    .card { max-width:680px; padding:18px 20px; border:1px solid var(--line); border-radius:18px; background:Canvas; }
+    .eyebrow { margin:0 0 8px; color:var(--accent); font-size:11px; font-weight:800; letter-spacing:.08em; }
+    h1 { margin:0; font-size:20px; line-height:1.3; }
+    .models { display:flex; align-items:center; gap:8px; margin:14px 0 10px; font-size:12px; }
+    .model { padding:6px 9px; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+    .arrow { color:var(--muted); }
+    .reason,.hint,.status { font-size:12px; line-height:1.55; }
+    .reason { margin:0; }
+    .hint { margin:12px 0 0; color:var(--muted); }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+    button { min-height:36px; padding:8px 13px; border:1px solid var(--line); border-radius:9px; background:Canvas; color:CanvasText; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+    button.primary { border-color:var(--accent); background:var(--accent); color:#fff; }
+    button:disabled { cursor:not-allowed; opacity:.55; }
+    .status { min-height:19px; margin-top:10px; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="eyebrow" id="eyebrow">模型哨兵 · 本轮已暂停</p>
+    <h1>建议调整本轮使用的模型</h1>
+    <div class="models"><span class="model" id="currentModel">当前模型</span><span class="arrow">→</span><span class="model" id="recommendedModel">建议模型</span></div>
+    <p class="reason" id="rationale"></p>
+    <p class="hint">如需切换，请先使用 Codex 原生模型选择器，再点击“已选择模型，继续任务”。插件不会直接修改模型。</p>
+    <div class="actions">
+      <button class="primary" id="acknowledge" type="button">已选择模型，继续任务</button>
+      <button id="ignore" type="button">忽略建议，继续任务</button>
+    </div>
+    <div class="status" id="status" aria-live="polite"></div>
+  </main>
+  <script>
+    let payload=null,nextRequestId=1,busy=false;const pendingRequests=new Map();const byId=(id)=>document.getElementById(id);
+    function render(next){payload=next?.structuredContent||next||payload;if(!payload)return;byId("eyebrow").textContent=payload.source==="test"?"模型哨兵 · 确定性测试":"模型哨兵 · 本轮已暂停";byId("currentModel").textContent=payload.currentModel||"当前模型未知";byId("recommendedModel").textContent=payload.recommendedModel||"建议模型未知";byId("rationale").textContent=payload.rationale||"未提供建议原因。"}
+    async function callTool(name,args){if(window.openai?.callTool)return window.openai.callTool(name,args);const id=nextRequestId++;window.parent.postMessage({jsonrpc:"2.0",id,method:"tools/call",params:{name,arguments:args}},"*");return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{pendingRequests.delete(id);reject(new Error("工具调用超时"))},10000);pendingRequests.set(id,{resolve(v){clearTimeout(timeout);resolve(v)},reject(e){clearTimeout(timeout);reject(e)}})})}
+    function setBusy(value){busy=value;byId("acknowledge").disabled=value;byId("ignore").disabled=value}
+    async function sendResume(prompt){if(typeof window.openai?.sendFollowUpMessage!=="function")return false;await window.openai.sendFollowUpMessage({prompt,title:"继续模型哨兵暂停的任务"});return true}
+    async function continueTask(decision){if(busy||!payload?.sessionId||!payload?.gateId)return;setBusy(true);byId("status").textContent="正在准备继续…";try{const idempotencyKey=crypto.randomUUID();const result=await callTool("model_watch_prepare_resume",{sessionId:payload.sessionId,gateId:payload.gateId,decision,idempotencyKey});const data=result?.structuredContent||result;if(!data?.prepared||!data?.resumePrompt)throw new Error("续跑状态未准备完成");const sent=await sendResume(data.resumePrompt);if(!sent)throw new Error("当前宿主不支持卡片续跑");byId("status").textContent="已提交继续请求；如未自动继续，请原样重新发送上一条任务。"}catch(error){byId("status").textContent=`未能自动继续：${error instanceof Error?error.message:"请原样重新发送上一条任务"}`;setBusy(false)}}
+    byId("acknowledge").addEventListener("click",()=>continueTask("acknowledged"));byId("ignore").addEventListener("click",()=>continueTask("ignored"));
+    window.addEventListener("message",(event)=>{if(event.source!==window.parent)return;const message=event.data;if(!message||message.jsonrpc!=="2.0")return;if(message.id!==undefined&&pendingRequests.has(message.id)){const pending=pendingRequests.get(message.id);pendingRequests.delete(message.id);if(message.error)pending.reject(message.error);else pending.resolve(message.result);return}if(message.method==="ui/notifications/tool-result")render(message.params)});render(window.openai?.toolOutput);
+  </script>
+</body>
+</html>

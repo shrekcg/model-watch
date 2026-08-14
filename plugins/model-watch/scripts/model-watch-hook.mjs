@@ -3,8 +3,9 @@ import { parseModelWatchCommand } from "../src/commands.mjs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hashPrompt } from "../src/engine.mjs";
-import { availableModelsFromEnv, modelIdsEqual } from "../src/models.mjs";
+import { availableModelsForConfig, modelIdsEqual } from "../src/models.mjs";
 import {
+  buildInvalidResumeContext,
   buildMonitoringContext,
   buildPausedContext,
   buildSessionContext
@@ -44,6 +45,11 @@ function modelFrom(input) {
   return candidates.find((value) => typeof value === "string" && value.trim())?.trim() || null;
 }
 
+function parseResumeEnvelope(prompt) {
+  const match = String(prompt || "").trim().match(/^\[MODEL_WATCH_RESUME\s+gate=([a-zA-Z0-9-]{1,80})\s+nonce=([a-zA-Z0-9-]{1,100})\]$/u);
+  return match ? { gateId: match[1], resumeNonce: match[2] } : null;
+}
+
 function observeTicket(task, actualModel, routeMatched, resultOverride = null) {
   const ticket = task.routeTicket;
   if (!ticket) return;
@@ -57,9 +63,11 @@ function observeTicket(task, actualModel, routeMatched, resultOverride = null) {
   appendObservation(task, {
     result,
     assessmentId: ticket.assessmentId,
+    explicitDecision: ticket.explicitDecision,
     originalModel: ticket.originalModel,
     recommendedModel: ticket.recommendedModel,
-    actualModel
+    actualModel,
+    source: ticket.source
   });
 }
 
@@ -90,49 +98,72 @@ async function handleUserPrompt(input, dataDir) {
   const prompt = String(input.prompt || "");
   const model = modelFrom(input);
   const command = parseModelWatchCommand(prompt);
+  const resumeEnvelope = parseResumeEnvelope(prompt);
   const existed = taskStateExists(sessionId, dataDir);
-  let task = loadTaskState(sessionId, dataDir);
-  if (!existed && loadGlobalConfig(dataDir).autoEnableNewTasks) task.enabled = true;
-
-  if (command?.action === "on") { task.enabled = true; task.paused = false; }
-  if (command?.action === "off") {
-    observeTicket(task, model || task.currentModel, false, "cancelled");
-    task.enabled = false;
-    task.paused = false;
-    task.routeTicket = null;
+  const initialTask = loadTaskState(sessionId, dataDir);
+  if (!initialTask.enabled && !command && !resumeEnvelope
+    && !( !existed && loadGlobalConfig(dataDir).autoEnableNewTasks)) {
+    return continueOutput("UserPromptSubmit");
   }
-  if (command?.action === "pause") task.paused = true;
-  if (command?.action === "resume") { task.enabled = true; task.paused = false; }
-
-  if (!task.enabled && !command) return continueOutput("UserPromptSubmit");
-
   const promptHash = hashPrompt(command?.remainder || prompt);
-  const routeExpired = Boolean(task.routeTicket?.expiresAt && Date.parse(task.routeTicket.expiresAt) <= Date.now());
-  const routeMatched = Boolean(!routeExpired && task.routeTicket?.expiresAt
-    && Date.parse(task.routeTicket.expiresAt) > Date.now()
-    && task.routeTicket.promptHash === promptHash);
-  if (task.routeTicket) {
-    observeTicket(task, model, routeMatched, routeMatched ? null : routeExpired ? "expired" : "superseded");
-    task.routeTicket = null;
-  }
-  const currentModel = model || task.currentModel;
-  task.currentModel = currentModel;
-  task.activeRequest = {
-    turnId: String(input.turn_id || input.turnId || "unknown"),
-    promptHash,
-    originalModel: currentModel,
-    commandAction: command?.action || null,
-    createdAt: new Date().toISOString()
-  };
-  task = mutateTaskState(sessionId, () => task, dataDir);
+  let routeMatched = false;
+  let cardResumeMatched = false;
+  let routeSource = "live";
+  let invalidCardResume = false;
+  let task = mutateTaskState(sessionId, (draft) => {
+    if (!existed && loadGlobalConfig(dataDir).autoEnableNewTasks) draft.enabled = true;
+    if (command?.action === "on") { draft.enabled = true; draft.paused = false; }
+    if (command?.action === "off") {
+      observeTicket(draft, model || draft.currentModel, false, "cancelled");
+      draft.enabled = false;
+      draft.paused = false;
+      draft.routeTicket = null;
+    }
+    if (command?.action === "pause") draft.paused = true;
+    if (command?.action === "resume") { draft.enabled = true; draft.paused = false; }
 
-  if (["on", "off", "pause", "resume", "status", "settings", "unknown"].includes(command?.action)) {
+    const routeExpired = Boolean(draft.routeTicket?.expiresAt && Date.parse(draft.routeTicket.expiresAt) <= Date.now());
+    cardResumeMatched = Boolean(!routeExpired && resumeEnvelope && draft.routeTicket?.status === "armed"
+      && draft.routeTicket.gateId === resumeEnvelope.gateId
+      && draft.routeTicket.resumeNonce === resumeEnvelope.resumeNonce);
+    invalidCardResume = Boolean(resumeEnvelope && !cardResumeMatched);
+    const manualResumeMatched = Boolean(!resumeEnvelope && !routeExpired && draft.routeTicket?.expiresAt
+      && Date.parse(draft.routeTicket.expiresAt) > Date.now()
+      && draft.routeTicket.promptHash === promptHash);
+    routeMatched = cardResumeMatched || manualResumeMatched;
+    routeSource = draft.routeTicket?.source || "live";
+    if (draft.routeTicket && !invalidCardResume) {
+      observeTicket(draft, model, routeMatched, routeMatched ? null : routeExpired ? "expired" : "superseded");
+      draft.routeTicket = null;
+    }
+    if (invalidCardResume) return draft;
+    const currentModel = model || draft.currentModel;
+    draft.currentModel = currentModel;
+    draft.activeRequest = {
+      turnId: String(input.turn_id || input.turnId || "unknown"),
+      promptHash,
+      originalModel: currentModel,
+      commandAction: command?.action || null,
+      createdAt: new Date().toISOString()
+    };
+    return draft;
+  }, dataDir);
+
+  if (invalidCardResume) {
+    return continueOutput(
+      "UserPromptSubmit",
+      buildInvalidResumeContext({ task, config: getEffectiveConfig(sessionId, dataDir) })
+    );
+  }
+  if (!task.enabled && !command && !routeMatched) return continueOutput("UserPromptSubmit");
+
+  if (["on", "off", "pause", "resume", "status", "settings", "unknown", "test-card", "test"].includes(command?.action)) {
     return continueOutput(
       "UserPromptSubmit",
       buildMonitoringContext({
         sessionId,
         model,
-        availableModels: availableModelsFromEnv(),
+        availableModels: availableModelsForConfig(getEffectiveConfig(sessionId, dataDir)),
         task,
         config: getEffectiveConfig(sessionId, dataDir),
         command
@@ -146,11 +177,12 @@ async function handleUserPrompt(input, dataDir) {
       buildMonitoringContext({
         sessionId,
         model,
-        availableModels: availableModelsFromEnv(),
+        availableModels: availableModelsForConfig(config),
         task,
         config,
         command,
-        routeMatched: true
+        routeMatched: true,
+        resumedFromCard: cardResumeMatched ? routeSource : false
       })
     );
   }
@@ -162,7 +194,7 @@ async function handleUserPrompt(input, dataDir) {
     buildMonitoringContext({
       sessionId,
       model,
-      availableModels: availableModelsFromEnv(),
+      availableModels: availableModelsForConfig(config),
       task,
       config,
       command
